@@ -1,11 +1,12 @@
 {
   "name": "create-nexus-kit",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Scaffold a Nexus Kit project - Spec-Driven Development (SDD) & Agent Skills Template",
   "type": "module",
   "main": "./bin/index.js",
   "bin": {
-    "create-nexus-kit": "bin/index.js"
+    "create-nexus-kit": "bin/index.js",
+    "nexus-kit": "bin/index.js"
   },
   "files": [
     "bin",

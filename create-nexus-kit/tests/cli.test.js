@@ -67,6 +67,11 @@ describe('scaffoldProject & Non-Overwrite Safety (P0)', () => {
     assert.ok(result.created.includes('.github/copilot-instructions.md'));
     assert.ok(fs.existsSync(path.join(tmpDir, '.specify/templates/spec-template.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, '.agents/skills/sdd-verifier/SKILL.md')));
+    const generatedReadme = fs.readFileSync(path.join(tmpDir, 'README.md'), 'utf8');
+    assert.match(generatedReadme, /Getting Started/);
+    assert.match(generatedReadme, /--approve/);
+    assert.match(generatedReadme, /--doctor/);
+    assert.match(generatedReadme, /Change Management/);
   });
 
   test('does NOT overwrite existing files by default and reports skipped files', () => {
@@ -236,15 +241,24 @@ describe('install.sh parity & CLI flags', () => {
 
     const run2 = spawnSync('bash', [INSTALL_SH_PATH, tmpDir, '--force'], { encoding: 'utf8' });
     assert.equal(run2.status, 0);
-    assert.notEqual(fs.readFileSync(path.join(tmpDir, 'README.md'), 'utf8'), '# Existing User Docs');
+    const bashReadme = fs.readFileSync(path.join(tmpDir, 'README.md'), 'utf8');
+    assert.notEqual(bashReadme, '# Existing User Docs');
+    assert.match(bashReadme, /Getting Started/);
+    assert.match(bashReadme, /npx create-nexus-kit@latest --approve/);
   });
 
-  test('--help and --version print expected output', () => {
+  test('--help, --version, and package.json bin aliases are properly configured', () => {
     const helpOut = execFileSync(process.execPath, [CLI_PATH, '--help'], { encoding: 'utf8' });
     assert.match(helpOut, /--force/);
     assert.match(helpOut, /--doctor/);
+    assert.match(helpOut, /nexus-kit/);
 
     const verOut = execFileSync(process.execPath, [CLI_PATH, '--version'], { encoding: 'utf8' });
     assert.equal(verOut.trim(), `create-nexus-kit v${VERSION}`);
+
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
+    assert.equal(pkg.version, VERSION);
+    assert.equal(pkg.bin['create-nexus-kit'], 'bin/index.js');
+    assert.equal(pkg.bin['nexus-kit'], 'bin/index.js');
   });
 });

@@ -42,22 +42,22 @@ No global installation required (skips existing files by default unless `--force
 
 ```bash
 # Scaffold in a new folder
-npx create-nexus-kit my-app
+npx create-nexus-kit@latest my-app
 
 # Scaffold safely inside an existing project (skips existing files)
-npx create-nexus-kit .
+npx create-nexus-kit@latest .
 
 # Overwrite existing files intentionally
-npx create-nexus-kit . --force
+npx create-nexus-kit@latest . --force
 
 # Approve a spec and stamp its canonical SHA-256 hash
-npx create-nexus-kit --approve .specify/tasks/001-feature-spec.md
+npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 
 # Verify a spec is approved and not stale before coding
-npx create-nexus-kit --verify-spec .specify/tasks/001-feature-spec.md
+npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 
 # Run full Nexus Kit integrity validation (specs, hashes, skills, adapters)
-npx create-nexus-kit --doctor
+npx create-nexus-kit@latest --doctor
 ```
 
 ### Method 2: Using Shell Script
@@ -70,11 +70,13 @@ curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-ne
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash -s -- my-app
 ```
 
-### Method 3: Global npm Installation
+### Method 3: Global npm Installation (Enables `nexus-kit` Alias)
 
 ```bash
 npm install -g create-nexus-kit
-create-nexus-kit my-app
+nexus-kit my-app
+nexus-kit --approve .specify/tasks/001-feature-spec.md
+nexus-kit --doctor
 ```
 
 ---
@@ -98,21 +100,29 @@ my-app/
 ├── CLAUDE.md                         # Claude Code instructions
 ├── src/                              # Application source code
 ├── .gitignore                        # Standard exclusions
-└── README.md                         # Project overview & agent instructions
+└── README.md                         # Project quickstart & walkthrough
 ```
 
 ---
 
-## Agent Protocol
+## Step-by-Step Usage Walkthrough
 
 ```
-Request ➔ sdd-planner (Draft Spec) ➔ Human Review Gate ➔ sdd-coder (Implement) ➔ sdd-verifier (Audit)
+Setup Stack ➔ sdd-planner (Draft Spec) ➔ --approve (SHA-256) ➔ sdd-coder (Code) ➔ sdd-verifier (Audit)
 ```
 
-1. **Plan**: Prompt your AI agent to design a feature. The agent triggers `sdd-planner`, reads `constitution.md`, asks clarifying questions, and drafts `.specify/tasks/<feature>-spec.md`.
-2. **Approve**: Review and approve the generated specification (Data models, API contracts, Edge cases).
-3. **Build**: Prompt the agent to implement the approved spec. The agent activates `sdd-coder` to write exact, type-safe code and tests in `src/`.
-4. **Verify**: The agent triggers `sdd-verifier` to audit all Acceptance Criteria before completion.
+1. **Configure Tech Stack**: Edit line 4 in `.specify/constitution.md` (e.g., `TypeScript 5, Node.js 20, Vitest`) and verify with `npx create-nexus-kit@latest --doctor`.
+2. **Plan (`sdd-planner`)**: Open your AI IDE and prompt:
+   > *"Plan a feature for user authentication with JWT. Do not write code yet."*  
+   The agent clarifies requirements and creates `.specify/tasks/001-jwt-auth-spec.md` (`Status: Draft`).
+3. **Approve (`--approve`)**: Inspect the spec, then lock and stamp its canonical hash:
+   ```bash
+   npx create-nexus-kit@latest --approve .specify/tasks/001-jwt-auth-spec.md
+   ```
+4. **Implement & Verify (`sdd-coder` + `sdd-verifier`)**: Prompt your AI IDE:
+   > *"Implement the approved spec `.specify/tasks/001-jwt-auth-spec.md`."*  
+   `sdd-coder` verifies `--verify-spec`, writes code and tests strictly within `In-Scope`, and `sdd-verifier` audits Acceptance Criteria before setting `Status: Completed`.
+5. **Change Management**: If requirements change later, ask `sdd-planner` to bump `Version`, log the change in `## Change Log`, reset `Status` to `In Review`, and re-run `--approve` before coding.
 
 ---
 

@@ -85,26 +85,35 @@ Khởi tạo một dự án mới an toàn (mặc định tự động **bỏ qu
 
 ```bash
 # Cách 1: Sử dụng npx (Khuyên dùng)
-npx create-nexus-kit my-project
+npx create-nexus-kit@latest my-project
 
 # Tích hợp an toàn vào dự án đang có sẵn (không ghi đè file cũ)
-npx create-nexus-kit .
+npx create-nexus-kit@latest .
 
 # Chủ động ghi đè lại các tệp nếu muốn thiết lập lại từ đầu
-npx create-nexus-kit . --force
+npx create-nexus-kit@latest . --force
 
-# Cách 2: Sử dụng Shell Script
+# Cách 2: Cài đặt Global (dùng lệnh rút gọn 'nexus-kit')
+npm install -g create-nexus-kit
+nexus-kit my-project
+
+# Cách 3: Sử dụng Shell Script (không cần cài trước Node.js)
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
+```
 
+### Các lệnh vận hành hằng ngày
+
+```bash
 # Phê duyệt Spec và đóng dấu mã băm SHA-256 (chống sửa đổi lén hoặc spec lỗi thời)
-npx create-nexus-kit --approve .specify/tasks/001-feature-spec.md
+npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 
 # Kiểm tra Spec đã được duyệt và còn nguyên vẹn trước khi Coder triển khai
-npx create-nexus-kit --verify-spec .specify/tasks/001-feature-spec.md
+npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 
 # Chạy kiểm định toàn vẹn hệ thống (specs, hashes, skills, adapters, template parity)
-npx create-nexus-kit --doctor
+npx create-nexus-kit@latest --doctor
 ```
+*(Sau khi cài `npm i -g create-nexus-kit`, bạn có thể gõ ngắn gọn `nexus-kit` thay cho `npx create-nexus-kit@latest`.)*
 
 ---
 
@@ -136,16 +145,24 @@ nexus-kit/
 
 ---
 
-## Quy trình vận hành AI Agent
+## Hướng dẫn sử dụng thực tế (Step-by-Step)
 
 ```
-Yêu cầu ➔ sdd-planner (Tạo Spec) ➔ Cổng duyệt của Con người ➔ sdd-coder (Viết Code) ➔ sdd-verifier (Kiểm toán)
+Cấu hình Stack ➔ sdd-planner (Lập Spec) ➔ --approve (SHA-256) ➔ sdd-coder (Code) ➔ sdd-verifier (Kiểm toán)
 ```
 
-1. **Lập kế hoạch**: Yêu cầu Agent thiết kế tính năng. Agent kích hoạt `sdd-planner`, nạp `spec-template.md`, hỏi làm rõ yêu cầu và tạo bản đặc tả tại `.specify/tasks/`.
-2. **Cổng phê duyệt**: Con người rà soát và phê duyệt bản đặc tả trước khi cho phép sinh mã nguồn.
-3. **Triển khai**: Yêu cầu Agent tiến hành lập trình. Agent kích hoạt `sdd-coder` để viết code tường minh, có kiểu dữ liệu chặt chẽ và test trong `src/`.
-4. **Kiểm toán**: Agent kích hoạt `sdd-verifier` để đối chiếu toàn bộ tiêu chí Acceptance Criteria trước khi hoàn tất công việc.
+1. **Cấu hình Tech Stack (Làm 1 lần đầu)**: Mở `.specify/constitution.md` và cập nhật dòng số 4 (ví dụ: `TypeScript 5, Next.js 15, Zod, Vitest`), sau đó chạy `npx create-nexus-kit@latest --doctor`.
+2. **Lập kế hoạch (`sdd-planner`)**: Mở AI IDE và chat với Agent:
+   > *"Hãy lập kế hoạch tính năng xác thực JWT. Chưa viết code vội."*  
+   Agent sẽ đọc `constitution.md`, hỏi làm rõ yêu cầu và tạo `.specify/tasks/001-jwt-auth-spec.md` (`Status: Draft`).
+3. **Con người duyệt & Đóng dấu (`--approve`)**: Kiểm tra bản spec rồi chốt bằng lệnh:
+   ```bash
+   npx create-nexus-kit@latest --approve .specify/tasks/001-jwt-auth-spec.md
+   ```
+4. **Triển khai & Kiểm toán (`sdd-coder` + `sdd-verifier`)**: Chat tiếp với Agent:
+   > *"Hãy triển khai code cho spec `.specify/tasks/001-jwt-auth-spec.md`."*  
+   `sdd-coder` kiểm tra `--verify-spec` (chặn spec `Draft` hoặc đã bị sửa đổi sau duyệt), viết code trong `In-Scope` kèm unit test. `sdd-verifier` đối chiếu các tiêu chí nghiệm thu, tích `[x]`, chuyển `Status: Completed` và chạy `--doctor`.
+5. **Quản lý thay đổi (Change Management)**: Nếu cần đổi yêu cầu giữa chừng, yêu cầu `sdd-planner` tăng `Version` (ví dụ `1.0.0` ➔ `1.1.0`), ghi vào `## Change Log`, đưa `Status` về `In Review`, rồi chạy lại `--approve` trước khi cho phép `sdd-coder` sửa code.
 
 ---
 

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '1.4.0';
+export const VERSION = '1.5.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -261,21 +261,44 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
 
   readme: (projectName) => `# ${projectName}
 
-**The Ultimate Integration Framework for Spec Kit & Agent Skills**
+Powered by **Nexus Kit** (Spec Kit + Agent Skills) for deterministic, spec-driven AI engineering.
 
-Nexus Kit là lớp điều phối và tích hợp tối ưu (Orchestration Layer) kết nối giữa **Spec Kit** (hệ thống quản trị đặc tả) và **Agent Skills** (hệ sinh thái kỹ năng của AI Agent). Cấu trúc này thiết lập một môi trường làm việc kỷ luật, đảm bảo AI Agents luôn vận hành có quy trình, loại bỏ hoàn toàn tình trạng "Vibe Coding".
+## Getting Started (4-Step Workflow)
 
-## Kiến trúc thư mục
-- **\`.specify/\`**: Nơi chứa bộ luật (\`constitution.md\`), mẫu đặc tả (\`templates/\`) và các bản thiết kế tính năng (\`tasks/\`).
-- **\`.agents/skills/\`**: Nơi chứa bộ ba kỹ năng SDD: \`sdd-planner\`, \`sdd-coder\`, và \`sdd-verifier\`.
-- **\`AGENTS.md\`, \`CLAUDE.md\`, \`.cursor/rules/\`, \`.github/copilot-instructions.md\`**: Các cầu nối tự động kích hoạt luật cho Antigravity, Claude Code, Cursor và GitHub Copilot.
-- **\`src/\`**: Nơi chứa mã nguồn thực tế.
+### 1. Configure Your Tech Stack
+Update line 4 in \`.specify/constitution.md\` (e.g., \`TypeScript 5, Node.js 20, Vitest\`):
+\`\`\`bash
+npx create-nexus-kit@latest --doctor
+\`\`\`
 
-## Quy trình làm việc cho Agent
-1. Gọi Agent lập kế hoạch tính năng (Agent kích hoạt \`sdd-planner\`, sinh spec vào \`.specify/tasks/\`).
-2. Con người duyệt bản spec bằng \`npx create-nexus-kit --approve .specify/tasks/<file>.md\` (Human Approval Gate).
-3. Yêu cầu Agent tiến hành code (Agent kích hoạt \`sdd-coder\`, kiểm tra \`--verify-spec\` và viết code vào \`src/\`).
-4. Thẩm định chéo chất lượng code (Agent kích hoạt \`sdd-verifier\` đối chiếu Acceptance Criteria và chạy \`--doctor\`).
+### 2. Plan a Feature (\`sdd-planner\`)
+Open your AI IDE (Antigravity, Claude Code, Cursor, or GitHub Copilot) and prompt:
+> *"Plan a feature for user authentication with JWT. Do not write code yet."*
+
+The agent reads \`.specify/constitution.md\`, clarifies ambiguities, and saves \`.specify/tasks/001-jwt-auth-spec.md\` (\`Status: Draft\`).
+
+### 3. Review & Approve the Spec (\`--approve\`)
+Review the generated spec, then lock and stamp its SHA-256 hash:
+\`\`\`bash
+npx create-nexus-kit@latest --approve .specify/tasks/001-jwt-auth-spec.md
+\`\`\`
+*(Tip: If you installed \`npm i -g create-nexus-kit\`, you can use the short alias \`nexus-kit --approve ...\`)*
+
+### 4. Implement & Verify (\`sdd-coder\` + \`sdd-verifier\`)
+Prompt your AI agent:
+> *"Implement the approved spec \`.specify/tasks/001-jwt-auth-spec.md\`."*
+
+- \`sdd-coder\` verifies \`--verify-spec\` before writing modular code and tests in \`src/\`.
+- \`sdd-verifier\` audits Acceptance Criteria, marks them \`[x]\`, and runs \`--doctor\`.
+
+### Changing Requirements Mid-Flight (Change Management)
+If requirements change after approval: prompt the agent to bump \`Version\` in the spec, log the change in \`## Change Log\`, reset \`Status\` to \`In Review\`, and re-run \`--approve\` before coding.
+
+## Repository Layout
+- **\`.specify/\`**: \`constitution.md\`, \`templates/spec-template.md\`, and \`tasks/*.md\`.
+- **\`.agents/skills/\`**: \`sdd-planner\`, \`sdd-coder\`, and \`sdd-verifier\`.
+- **\`AGENTS.md\`, \`CLAUDE.md\`, \`.cursor/rules/\`, \`.github/copilot-instructions.md\`**: Automatic IDE rule adapters.
+- **\`src/\`**: Application source code.
 `,
 
   gitignore: `# OS

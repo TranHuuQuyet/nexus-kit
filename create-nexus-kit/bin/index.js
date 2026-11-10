@@ -34,10 +34,11 @@ function printHelp() {
   console.log(BANNER);
   console.log(`
 ${c.bold}Usage:${c.reset}
-  npx create-nexus-kit [project-name] [options]
-  npx create-nexus-kit --doctor [target-dir]
-  npx create-nexus-kit --approve <spec-file> [--by <reviewer>]
-  npx create-nexus-kit --verify-spec <spec-file>
+  npx create-nexus-kit@latest [project-name] [options]
+  npx create-nexus-kit@latest --doctor [target-dir]
+  npx create-nexus-kit@latest --approve <spec-file> [--by <reviewer>]
+  npx create-nexus-kit@latest --verify-spec <spec-file>
+  ${c.dim}(Or use the short command 'nexus-kit' after 'npm i -g create-nexus-kit')${c.reset}
 
 ${c.bold}Arguments:${c.reset}
   [project-name]     Name of the directory to create (default: nexus-kit-app)
@@ -52,11 +53,11 @@ ${c.bold}Options:${c.reset}
   -v, --version           Show version number
 
 ${c.bold}Examples:${c.reset}
-  ${c.dim}$${c.reset} npx create-nexus-kit my-awesome-app
-  ${c.dim}$${c.reset} npx create-nexus-kit . --force
-  ${c.dim}$${c.reset} npx create-nexus-kit --approve .specify/tasks/001-auth-spec.md
-  ${c.dim}$${c.reset} npx create-nexus-kit --verify-spec .specify/tasks/001-auth-spec.md
-  ${c.dim}$${c.reset} npx create-nexus-kit --doctor
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest my-awesome-app
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest . --force
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest --approve .specify/tasks/001-auth-spec.md
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest --verify-spec .specify/tasks/001-auth-spec.md
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest --doctor
 `);
 }
 
