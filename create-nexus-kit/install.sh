@@ -21,7 +21,23 @@ cat << "EOF"
 EOF
 echo -e "${MAGENTA}${BOLD}  Spec-Driven Development (SDD) for AI Agents${NC}\n"
 
-PROJECT_NAME="${1:-nexus-kit-app}"
+FORCE="false"
+PROJECT_NAME=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --force|-f)
+      FORCE="true"
+      ;;
+    *)
+      if [ -z "$PROJECT_NAME" ]; then
+        PROJECT_NAME="$arg"
+      fi
+      ;;
+  esac
+done
+
+PROJECT_NAME="${PROJECT_NAME:-nexus-kit-app}"
 
 if [ "$PROJECT_NAME" = "." ]; then
   PROJECT_DIR="$(pwd)"
@@ -47,14 +63,35 @@ mkdir -p "$PROJECT_DIR/.cursor/rules"
 mkdir -p "$PROJECT_DIR/.github"
 mkdir -p "$PROJECT_DIR/src"
 
-# Keep empty git folders
-touch "$PROJECT_DIR/.specify/tasks/.gitkeep"
-touch "$PROJECT_DIR/src/.gitkeep"
+SKIPPED_COUNT=0
+
+# Helper: safe_write <rel_path> << 'EOF' ... EOF
+safe_write() {
+  local rel_path="$1"
+  local full_path="$PROJECT_DIR/$rel_path"
+  if [ -f "$full_path" ] && [ "$FORCE" != "true" ]; then
+    cat > /dev/null
+    echo -e "  ${DIM}[SKIPPED]     $rel_path (already exists)${NC}"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+  else
+    local existed="false"
+    [ -f "$full_path" ] && existed="true"
+    cat > "$full_path"
+    if [ "$existed" = "true" ]; then
+      echo -e "  ${YELLOW}[OVERWRITTEN]${NC} $rel_path"
+    else
+      echo -e "  ${GREEN}[CREATED]${NC}     $rel_path"
+    fi
+  fi
+}
+
+# Keep empty git folders safely
+safe_write ".specify/tasks/.gitkeep" < /dev/null
+safe_write "src/.gitkeep" < /dev/null
 
 echo -e "${YELLOW}→ Generating templates, skills, and IDE adapters...${NC}"
 
-# .specify/constitution.md
-cat << 'EOF' > "$PROJECT_DIR/.specify/constitution.md"
+safe_write ".specify/constitution.md" << 'EOF'
 # Core Constitution & Engineering Guidelines
 
 1. NO VIBE CODING: Never jump straight to writing code. Always verify if a specification exists in `.specify/tasks/` first.
@@ -62,10 +99,8 @@ cat << 'EOF' > "$PROJECT_DIR/.specify/constitution.md"
 3. QUALITY GATES: All code written must directly map to a predefined requirement in the task spec.
 4. TECH STACK: [Người dùng sẽ cập nhật công nghệ cụ thể tại đây]
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .specify/constitution.md"
 
-# .specify/templates/spec-template.md
-cat << 'EOF' > "$PROJECT_DIR/.specify/templates/spec-template.md"
+safe_write ".specify/templates/spec-template.md" << 'EOF'
 # [SPEC-ID]: [Feature Title]
 
 > **Status:** `Draft` | `In Review` | `Approved` | `In Progress` | `Completed`  
@@ -134,10 +169,8 @@ flowchart TD
 - [ ] **AC-4**: Không sử dụng `any`, tuân thủ 100% `constitution.md`.
 - [ ] **AC-5**: Có unit test bao phủ luồng chính và ít nhất 2 trường hợp lỗi biên.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .specify/templates/spec-template.md"
 
-# .agents/skills/sdd-planner/SKILL.md
-cat << 'EOF' > "$PROJECT_DIR/.agents/skills/sdd-planner/SKILL.md"
+safe_write ".agents/skills/sdd-planner/SKILL.md" << 'EOF'
 ---
 name: sdd-planner
 description: Skill to generate architecture and task specifications using Spec Kit.
@@ -169,10 +202,8 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
 7. **Human Approval Gate**:
    - Present a summary of the spec and explicitly ask the user to review and approve it before `sdd-coder` is permitted to execute.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-planner/SKILL.md"
 
-# .agents/skills/sdd-coder/SKILL.md
-cat << 'EOF' > "$PROJECT_DIR/.agents/skills/sdd-coder/SKILL.md"
+safe_write ".agents/skills/sdd-coder/SKILL.md" << 'EOF'
 ---
 name: sdd-coder
 description: Skill to write code strictly based on generated specifications.
@@ -198,10 +229,8 @@ Trigger this skill when the user asks to implement code or complete a task that 
    - Run the test suite and ensure all tests pass with zero warnings.
 5. **Handover to Verifier**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-coder/SKILL.md"
 
-# .agents/skills/sdd-verifier/SKILL.md
-cat << 'EOF' > "$PROJECT_DIR/.agents/skills/sdd-verifier/SKILL.md"
+safe_write ".agents/skills/sdd-verifier/SKILL.md" << 'EOF'
 ---
 name: sdd-verifier
 description: Skill to verify and audit implemented code against task specifications and constitution guardrails.
@@ -228,10 +257,22 @@ Trigger this skill immediately after `sdd-coder` finishes implementing code, bef
    - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
    - If any check fails, block completion and hand specific remediation items back to `sdd-coder`.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-verifier/SKILL.md"
 
-# CLAUDE.md
-cat << 'EOF' > "$PROJECT_DIR/CLAUDE.md"
+safe_write "AGENTS.md" << 'EOF'
+# AGENTS.md — Nexus Kit SDD Protocol
+
+This workspace operates under **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Rules
+1. **NO VIBE CODING**: Never write or modify application code in `src/` without an approved specification in `.specify/tasks/`.
+2. **Read Constitution First**: Always read `.specify/constitution.md` before planning or writing code.
+3. **Execute the SDD Triad** (located in `.agents/skills/`):
+   - **Planning**: Use `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md` to draft specs into `.specify/tasks/`. Wait for human approval before coding.
+   - **Coding**: Use `.agents/skills/sdd-coder/SKILL.md` to implement strictly within the `In-Scope` bounds of the approved spec.
+   - **Verification**: Use `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
+EOF
+
+safe_write "CLAUDE.md" << 'EOF'
 # CLAUDE.md — Nexus Kit SDD Protocol
 
 This project is governed by **Nexus Kit** (Spec-Driven Development).
@@ -244,10 +285,8 @@ This project is governed by **Nexus Kit** (Spec-Driven Development).
    - Implementing a spec -> Follow `.agents/skills/sdd-coder/SKILL.md`.
    - Auditing implementation -> Follow `.agents/skills/sdd-verifier/SKILL.md`.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} CLAUDE.md"
 
-# .cursor/rules/nexus-kit.mdc
-cat << 'EOF' > "$PROJECT_DIR/.cursor/rules/nexus-kit.mdc"
+safe_write ".cursor/rules/nexus-kit.mdc" << 'EOF'
 ---
 description: Enforce Nexus Kit Spec-Driven Development (SDD) Constitution and Skills workflow
 globs:
@@ -265,10 +304,8 @@ This repository uses **Nexus Kit**. You must enforce these rules on every intera
    - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .cursor/rules/nexus-kit.mdc"
 
-# .github/copilot-instructions.md
-cat << 'EOF' > "$PROJECT_DIR/.github/copilot-instructions.md"
+safe_write ".github/copilot-instructions.md" << 'EOF'
 # GitHub Copilot Instructions — Nexus Kit
 
 This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
@@ -281,10 +318,8 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
   - For implementation: follow `.agents/skills/sdd-coder/SKILL.md` and stay strictly within `In-Scope` bounds.
   - For verification: follow `.agents/skills/sdd-verifier/SKILL.md` to audit against Acceptance Criteria.
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .github/copilot-instructions.md"
 
-# README.md
-cat << EOF > "$PROJECT_DIR/README.md"
+safe_write "README.md" << EOF
 # ${PROJECT_DISPLAY_NAME}
 
 **The Ultimate Integration Framework for Spec Kit & Agent Skills**
@@ -294,7 +329,7 @@ Nexus Kit là lớp điều phối và tích hợp tối ưu (Orchestration Laye
 ## Kiến trúc thư mục
 - **\`.specify/\`**: Nơi chứa bộ luật (\`constitution.md\`), mẫu đặc tả (\`templates/\`) và các bản thiết kế tính năng (\`tasks/\`).
 - **\`.agents/skills/\`**: Nơi chứa bộ ba kỹ năng SDD: \`sdd-planner\`, \`sdd-coder\`, và \`sdd-verifier\`.
-- **\`CLAUDE.md\`, \`.cursor/rules/\`, \`.github/copilot-instructions.md\`**: Các cầu nối tự động kích hoạt luật cho Claude Code, Cursor và GitHub Copilot.
+- **\`AGENTS.md\`, \`CLAUDE.md\`, \`.cursor/rules/\`, \`.github/copilot-instructions.md\`**: Các cầu nối tự động kích hoạt luật cho Antigravity, Claude Code, Cursor và GitHub Copilot.
 - **\`src/\`**: Nơi chứa mã nguồn thực tế.
 
 ## Quy trình làm việc cho Agent
@@ -303,10 +338,8 @@ Nexus Kit là lớp điều phối và tích hợp tối ưu (Orchestration Laye
 3. Yêu cầu Agent tiến hành code (Agent kích hoạt \`sdd-coder\`, viết code vào \`src/\`).
 4. Thẩm định chéo chất lượng code (Agent kích hoạt \`sdd-verifier\` đối chiếu Acceptance Criteria).
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} README.md"
 
-# .gitignore
-cat << 'EOF' > "$PROJECT_DIR/.gitignore"
+safe_write ".gitignore" << 'EOF'
 # OS
 .DS_Store
 Thumbs.db
@@ -323,14 +356,17 @@ build/
 # Logs
 *.log
 EOF
-echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .gitignore"
 
-echo -e "\n${GREEN}${BOLD}✨ Success! Nexus Kit template created successfully.${NC}\n"
+if [ "$SKIPPED_COUNT" -gt 0 ]; then
+  echo -e "\n${YELLOW}ℹ Skipped ${SKIPPED_COUNT} existing file(s) to protect your data.${NC}"
+  echo -e "  ${DIM}Pass --force if you intentionally want to overwrite existing files.${NC}"
+fi
+
+echo -e "\n${GREEN}${BOLD}✔ Success! Nexus Kit scaffolding completed.${NC}\n"
 echo -e "${BOLD}Next steps:${NC}"
 if [ "$PROJECT_NAME" != "." ]; then
   echo -e "  1. ${CYAN}cd ${PROJECT_NAME}${NC}"
 fi
-echo -e "  2. Open the project in your AI-powered editor (Antigravity, Cursor, Claude Code, Copilot)"
+echo -e "  2. Open the project in your AI editor (Antigravity, Claude Code, Cursor, GitHub Copilot)"
 echo -e "  3. Update technology guidelines in ${CYAN}.specify/constitution.md${NC}"
-echo -e "  4. Let AI plan via ${YELLOW}sdd-planner${NC}, build via ${YELLOW}sdd-coder${NC}, and audit via ${YELLOW}sdd-verifier${NC}\n"
-echo -e "${DIM}Happy deterministic coding!${NC}\n"
+echo -e "  4. Plan via ${YELLOW}sdd-planner${NC}, build via ${YELLOW}sdd-coder${NC}, and audit via ${YELLOW}sdd-verifier${NC}\n"

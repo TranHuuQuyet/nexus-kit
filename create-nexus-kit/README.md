@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/create-nexus-kit"><img src="https://img.shields.io/npm/v/create-nexus-kit.svg" alt="npm version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen" alt="Node.js Version" /></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen" alt="Node.js Version" /></a>
   <a href="package.json"><img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies" /></a>
 </p>
 
@@ -30,7 +30,7 @@ Nexus Kit bridges them with a production-grade SDD triad and Multi-IDE adapters:
 - **`sdd-planner`**: Conducts clarifying interviews, enforces scope lock, and authors formal specifications into `.specify/tasks/`.
 - **`sdd-coder`**: Implements approved specifications in `src/` with strict typing, zero scope creep, and automated tests.
 - **`sdd-verifier`**: Performs zero-trust audits building a traceability matrix against all Acceptance Criteria.
-- **Multi-IDE Adapters**: Generates `CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, and `.github/copilot-instructions.md` for seamless enforcement across editors.
+- **IDE Adapters**: Generates verified rule files for Antigravity (`AGENTS.md` without frontmatter), Claude Code (`CLAUDE.md`), Cursor (`.cursor/rules/nexus-kit.mdc` with `alwaysApply: true`), and GitHub Copilot (`.github/copilot-instructions.md`).
 
 ---
 
@@ -38,16 +38,19 @@ Nexus Kit bridges them with a production-grade SDD triad and Multi-IDE adapters:
 
 ### Method 1: Using npx (Recommended)
 
-No global installation required:
+No global installation required (skips existing files by default unless `--force` is passed):
 
 ```bash
 # Scaffold in a new folder
 npx create-nexus-kit my-app
 
-# Or scaffold inside the current directory
+# Scaffold safely inside an existing project (skips existing files)
 npx create-nexus-kit .
 
-# Run health diagnostics on an existing project
+# Overwrite existing files intentionally
+npx create-nexus-kit . --force
+
+# Run deep YAML, structure, and cross-reference validation
 npx create-nexus-kit --doctor
 ```
 
@@ -83,8 +86,9 @@ my-app/
 │   ├── sdd-planner/SKILL.md          # Requirements elicitation & specification
 │   ├── sdd-coder/SKILL.md            # Deterministic implementation
 │   └── sdd-verifier/SKILL.md         # Specification compliance audit
-├── .cursor/rules/nexus-kit.mdc       # Cursor IDE rules
+├── .cursor/rules/nexus-kit.mdc       # Cursor IDE rules (alwaysApply: true)
 ├── .github/copilot-instructions.md   # GitHub Copilot instructions
+├── AGENTS.md                         # Antigravity / Open Standard directory rule
 ├── CLAUDE.md                         # Claude Code instructions
 ├── src/                              # Application source code
 ├── .gitignore                        # Standard exclusions

@@ -41,7 +41,7 @@ flowchart LR
         direction TB
         SpecDir[".specify/\n(constitution.md, tasks, templates)"]
         SkillsDir[".agents/skills/\n(sdd-planner, sdd-coder, sdd-verifier)"]
-        Adapters["Cầu nối Đa nền tảng\n(CLAUDE.md, Cursor, Copilot)"]
+        Adapters["Cầu nối IDE\n(AGENTS.md, CLAUDE.md, Cursor, Copilot)"]
     end
 
     SK -. "Cấu trúc Miền" .-> SpecDir
@@ -59,23 +59,44 @@ flowchart LR
   - **`sdd-planner`**: Phỏng vấn làm rõ yêu cầu, khóa phạm vi (Scope Lock) và khởi tạo đặc tả kỹ thuật chuẩn hóa trong `.specify/tasks/`.
   - **`sdd-coder`**: Lập trình mã nguồn trong `src/` với kiểu dữ liệu chặt chẽ, viết test tự động và bám sát phạm vi bản spec.
   - **`sdd-verifier`**: Thực hiện kiểm toán không khoan nhượng (Zero-Trust Audit), lập bảng truy vết đối chiếu từng tiêu chí nghiệm thu (`AC`).
-- **Cầu nối Đa nền tảng (Multi-IDE Adapters)**: Các tệp cấu hình nhẹ (`CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, `.github/copilot-instructions.md`) giúp Claude Code, Cursor, GitHub Copilot và Antigravity tự động nhận diện và tuân thủ luật Nexus Kit ngay lập tức.
+- **Cầu nối IDE & Cơ chế nạp đã kiểm chứng**: Các tệp cấu hình riêng cho từng công cụ lập trình AI:
+  - **Antigravity / Chuẩn mở**: Tự động nạp vô điều kiện tệp `AGENTS.md` (directory-based rule, không chứa frontmatter) và tự động quét kỹ năng tại `.agents/skills/*/SKILL.md`.
+  - **Claude Code**: Tự động nạp tệp `CLAUDE.md` ở thư mục gốc.
+  - **Cursor**: Tự động áp dụng `.cursor/rules/nexus-kit.mdc` qua cờ `alwaysApply: true`.
+  - **GitHub Copilot**: Tự động nạp `.github/copilot-instructions.md`.
 - **`src/`**: Mã nguồn sản phẩm, được sinh ra có kiểm soát và truy vết trực tiếp tới spec đã duyệt.
+
+---
+
+## Các IDE được hỗ trợ chính thức
+
+| IDE / Agent | Cơ chế nạp Quy tắc (Rules) | Cơ chế nạp Kỹ năng (Skills) | Trạng thái |
+| :--- | :--- | :--- | :--- |
+| **Antigravity** | `AGENTS.md` (quy tắc vô điều kiện tại gốc) | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
+| **Claude Code** | `CLAUDE.md` (tại thư mục gốc) | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
+| **Cursor** | `.cursor/rules/nexus-kit.mdc` (`alwaysApply: true`) | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
+| **GitHub Copilot** | `.github/copilot-instructions.md` | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
 
 ---
 
 ## Khởi tạo dự án
 
-Khởi tạo một dự án mới bằng công cụ CLI không phụ thuộc thư viện ngoài (Zero-dependency):
+Khởi tạo một dự án mới an toàn (mặc định tự động **bỏ qua các tệp đã tồn tại** để bảo vệ dữ liệu hiện có):
 
 ```bash
 # Cách 1: Sử dụng npx (Khuyên dùng)
 npx create-nexus-kit my-project
 
+# Tích hợp an toàn vào dự án đang có sẵn (không ghi đè file cũ)
+npx create-nexus-kit .
+
+# Chủ động ghi đè lại các tệp nếu muốn thiết lập lại từ đầu
+npx create-nexus-kit . --force
+
 # Cách 2: Sử dụng Shell Script
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 
-# Kiểm tra sức khỏe cấu hình dự án hiện tại
+# Chạy kiểm định sâu YAML frontmatter, cấu trúc và liên kết chéo
 npx create-nexus-kit --doctor
 ```
 
@@ -96,6 +117,7 @@ nexus-kit/
 │   └── sdd-verifier/SKILL.md         # Kiểm toán đối chiếu tiêu chí spec
 ├── .cursor/rules/nexus-kit.mdc       # Quy tắc tự động cho Cursor IDE
 ├── .github/copilot-instructions.md   # Quy tắc tự động cho GitHub Copilot
+├── AGENTS.md                         # Quy tắc tự động cho Antigravity / Chuẩn mở
 ├── CLAUDE.md                         # Quy tắc tự động cho Claude Code
 ├── src/                              # Mã nguồn ứng dụng
 ├── create-nexus-kit/                 # Gói công cụ dòng lệnh (npm)

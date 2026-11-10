@@ -41,7 +41,7 @@ flowchart LR
         direction TB
         SpecDir[".specify/\n(constitution.md, tasks, templates)"]
         SkillsDir[".agents/skills/\n(sdd-planner, sdd-coder, sdd-verifier)"]
-        Adapters["Multi-IDE Adapters\n(CLAUDE.md, Cursor, Copilot)"]
+        Adapters["IDE Adapters\n(AGENTS.md, CLAUDE.md, Cursor, Copilot)"]
     end
 
     SK -. "Domain Structure" .-> SpecDir
@@ -59,23 +59,44 @@ flowchart LR
   - **`sdd-planner`**: Conducts clarifying interviews, enforces scope lock, and authors formal specifications into `.specify/tasks/`.
   - **`sdd-coder`**: Implements approved specifications in `src/` with strict typing, zero scope creep, and automated tests.
   - **`sdd-verifier`**: Performs zero-trust audits building a traceability matrix against all Acceptance Criteria.
-- **Multi-IDE Adapters**: Lightweight rule pointers (`CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, `.github/copilot-instructions.md`) ensuring Claude Code, Cursor, GitHub Copilot, and Antigravity automatically enforce Nexus Kit out of the box.
+- **IDE Adapters & Verified Discovery**: Explicit, verified rule files for each supported agent runtime:
+  - **Antigravity / Open Standard**: Unconditionally loads `AGENTS.md` (directory-based rule without frontmatter) and progressively discovers `.agents/skills/*/SKILL.md`.
+  - **Claude Code**: Automatically loads `CLAUDE.md` at repository root.
+  - **Cursor**: Automatically enforces `.cursor/rules/nexus-kit.mdc` via `alwaysApply: true`.
+  - **GitHub Copilot**: Automatically loads `.github/copilot-instructions.md`.
 - **`src/`**: Application source code generated strictly from approved specifications.
+
+---
+
+## Supported IDEs
+
+| IDE / Agent | Rule Discovery Mechanism | Skills Discovery | Status |
+| :--- | :--- | :--- | :--- |
+| **Antigravity** | `AGENTS.md` (unconditional directory rule) | `.agents/skills/*/SKILL.md` | Verified |
+| **Claude Code** | `CLAUDE.md` (workspace root) | `.agents/skills/*/SKILL.md` | Verified |
+| **Cursor** | `.cursor/rules/nexus-kit.mdc` (`alwaysApply: true`) | `.agents/skills/*/SKILL.md` | Verified |
+| **GitHub Copilot** | `.github/copilot-instructions.md` | `.agents/skills/*/SKILL.md` | Verified |
 
 ---
 
 ## Quick Start
 
-Initialize a new project using the zero-dependency CLI:
+Initialize a new project safely using the zero-dependency CLI (existing files are skipped by default to protect user configurations):
 
 ```bash
 # Method 1: Using npx (Recommended)
 npx create-nexus-kit my-project
 
+# Scaffold safely into an existing project (skips existing files)
+npx create-nexus-kit .
+
+# Overwrite existing files intentionally
+npx create-nexus-kit . --force
+
 # Method 2: Using Shell Script
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 
-# Run health diagnostics on an existing project
+# Run deep YAML, structure, and cross-reference validation
 npx create-nexus-kit --doctor
 ```
 
@@ -96,6 +117,7 @@ nexus-kit/
 │   └── sdd-verifier/SKILL.md         # Specification compliance audit
 ├── .cursor/rules/nexus-kit.mdc       # Cursor IDE automatic rule enforcement
 ├── .github/copilot-instructions.md   # GitHub Copilot instructions
+├── AGENTS.md                         # Antigravity / Open Standard directory rule
 ├── CLAUDE.md                         # Claude Code automatic instructions
 ├── src/                              # Application source code
 ├── create-nexus-kit/                 # Scaffolding CLI package (npm)

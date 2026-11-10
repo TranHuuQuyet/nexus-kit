@@ -23,6 +23,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Run Unit & Integration Tests
+        run: |
+          cd create-nexus-kit
+          npm test
+
       - name: Test npm pack (Dry Run)
         run: |
           cd create-nexus-kit
@@ -31,30 +36,17 @@ jobs:
       - name: Test CLI Scaffolding & Doctor
         run: |
           node create-nexus-kit/bin/index.js test-app
-          test -f test-app/.specify/constitution.md
-          test -f test-app/.specify/templates/spec-template.md
-          test -f test-app/.agents/skills/sdd-planner/SKILL.md
-          test -f test-app/.agents/skills/sdd-coder/SKILL.md
-          test -f test-app/.agents/skills/sdd-verifier/SKILL.md
+          test -f test-app/AGENTS.md
           test -f test-app/CLAUDE.md
           test -f test-app/.cursor/rules/nexus-kit.mdc
           test -f test-app/.github/copilot-instructions.md
-          test -f test-app/README.md
-          test -f test-app/.gitignore
           node create-nexus-kit/bin/index.js --doctor test-app
           rm -rf test-app
 
       - name: Test Bash Install Script
         run: |
           bash create-nexus-kit/install.sh test-bash-app
-          test -f test-bash-app/.specify/constitution.md
-          test -f test-bash-app/.specify/templates/spec-template.md
-          test -f test-bash-app/.agents/skills/sdd-planner/SKILL.md
-          test -f test-bash-app/.agents/skills/sdd-coder/SKILL.md
-          test -f test-bash-app/.agents/skills/sdd-verifier/SKILL.md
-          test -f test-bash-app/CLAUDE.md
-          test -f test-bash-app/.cursor/rules/nexus-kit.mdc
-          test -f test-bash-app/.github/copilot-instructions.md
+          test -f test-bash-app/AGENTS.md
           node create-nexus-kit/bin/index.js --doctor test-bash-app
           rm -rf test-bash-app
 
