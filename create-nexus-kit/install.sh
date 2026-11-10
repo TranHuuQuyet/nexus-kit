@@ -64,7 +64,7 @@ echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .specify/constitution.md"
 
 # .specify/templates/spec-template.md
 cat << 'EOF' > "$PROJECT_DIR/.specify/templates/spec-template.md"
-# [SPEC-ID]: [Feature Title] 🎯
+# [SPEC-ID]: [Feature Title]
 
 > **Status:** `Draft` | `In Review` | `Approved` | `In Progress` | `Completed`  
 > **Author:** [AI Agent / Engineer]  
@@ -210,7 +210,7 @@ echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-verifier/SKILL
 
 # README.md
 cat << EOF > "$PROJECT_DIR/README.md"
-# ${PROJECT_DISPLAY_NAME} 🌌
+# ${PROJECT_DISPLAY_NAME}
 
 **The Ultimate Integration Framework for Spec Kit & Agent Skills**
 

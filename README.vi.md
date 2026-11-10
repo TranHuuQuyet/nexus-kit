@@ -1,105 +1,126 @@
-# Nexus Kit 🌌
+# Nexus Kit
 
 <p align="center">
   <a href="README.md"><b>English</b></a> | <b>Tiếng Việt</b>
 </p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/create-nexus-kit"><img src="https://img.shields.io/npm/v/create-nexus-kit.svg" alt="npm version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+  <a href="https://github.com/TranHuuQuyet/nexus-kit/actions"><img src="https://github.com/TranHuuQuyet/nexus-kit/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies" /></a>
+</p>
+
 ---
 
-**Khung tích hợp tối ưu giữa Spec Kit & Agent Skills**
+## Tổng quan
 
-Nexus Kit là lớp điều phối và tích hợp tối ưu (Orchestration Layer) kết nối giữa **Spec Kit** (hệ thống quản trị đặc tả) và **Agent Skills** (hệ sinh thái kỹ năng của AI Agent). Cấu trúc này thiết lập một môi trường làm việc kỷ luật, đảm bảo AI Agents luôn vận hành có quy trình, loại bỏ hoàn toàn tình trạng "Vibe Coding".
+Nexus Kit là khung điều phối tích hợp giữa **Spec Kit** (quản trị đặc tả) và **Agent Skills** (tiêu chuẩn kỹ năng cho AI Agent). Cấu trúc này thiết lập một môi trường kỹ thuật kỷ luật, tất định, nhằm loại bỏ hoàn toàn tình trạng lập trình theo cảm tính (Vibe Coding) của các mô hình ngôn ngữ lớn.
 
 ---
 
-## 🔗 Điều kiện tiên quyết (Prerequisites)
+## Điều kiện tiên quyết
 
-Để phát huy tối đa sức mạnh của Nexus Kit, môi trường phát triển của bạn nên có sẵn:
+Nexus Kit kết nối hai tiêu chuẩn mở thượng nguồn:
 
 1. **[Spec Kit](https://github.com/github/spec-kit)**: Công cụ và tiêu chuẩn quản lý vòng đời đặc tả (Specification Lifecycle).
-2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Tiêu chuẩn và kho kỹ năng định hướng hành vi cho AI Agent.
+2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Tiêu chuẩn công nghiệp mở định nghĩa hành vi và kỹ năng cho AI Agent (`SKILL.md`).
 
 ---
 
-## ⚙️ Nexus Kit kết hợp 2 hệ sinh thái như thế nào?
+## Kiến trúc hệ thống
 
 ```mermaid
 flowchart LR
-    subgraph Upstream["Hệ sinh thái bên ngoài"]
-        SK["Spec Kit\n(Quản lý Spec & Constitution)"]
-        AS["Agent Skills\n(Kỹ năng & Hành vi Agent)"]
+    subgraph Upstream["Tiêu chuẩn Thượng nguồn"]
+        SK["Spec Kit\n(Quản trị Đặc tả)"]
+        AS["Agent Skills\n(Tiêu chuẩn Kỹ năng)"]
     end
 
-    subgraph NexusKit["🌌 NEXUS KIT (Lớp điều phối)"]
+    subgraph NexusKit["Lõi Nexus Kit"]
         direction TB
         SpecDir[".specify/\n(constitution.md, tasks, templates)"]
         SkillsDir[".agents/skills/\n(sdd-planner, sdd-coder, sdd-verifier)"]
     end
 
-    SK -. "Tích hợp cấu trúc" .-> SpecDir
-    AS -. "Tích hợp kỹ năng" .-> SkillsDir
+    SK -. "Cấu trúc Miền" .-> SpecDir
+    AS -. "Chuẩn Giao thức" .-> SkillsDir
 
-    SpecDir <-->|"Hợp đồng & Luật lệ"| SkillsDir
-    SkillsDir -->|"Viết code chuẩn xác"| Src["src/"]
+    SpecDir <-->|"Hợp đồng & Cổng chất lượng"| SkillsDir
+    SkillsDir -->|"Mã nguồn Tất định"| Src["src/"]
 ```
 
-- **`.specify/` (Kế thừa Spec Kit)**: Nơi chứa bộ luật (`constitution.md`), các mẫu đặc tả (`templates/`) và các bản thiết kế tính năng (`tasks/`). Đây là "nguồn chân lý duy nhất" (Source of Truth) cho toàn bộ dự án.
-- **`.agents/skills/` (Chuẩn Agent Skills)**: Chứa bộ ba kỹ năng chuyên biệt do Nexus Kit cung cấp để làm cầu nối:
-  - **`sdd-planner`**: Dạy AI cách tuân thủ luật trong `constitution.md` và tạo ra các bản task spec chuẩn mực trong `.specify/tasks/`.
-  - **`sdd-coder`**: Dạy AI cách đọc spec từ `.specify/tasks/` và phối hợp với các kỹ năng coding khác để hiện thực hóa vào `src/`.
-  - **`sdd-verifier`**: Tự động kiểm toán chéo mã nguồn đối chiếu với từng tiêu chí nghiệm thu (Acceptance Criteria) trong spec.
-- **`src/`**: Mã nguồn sản phẩm, được sinh ra hoàn toàn tất định và bám sát spec.
+### Vai trò các thành phần
+
+- **`.specify/` (Miền Spec Kit)**: Chứa bản quy chuẩn kỹ thuật (`constitution.md`), các mẫu đặc tả (`templates/`) và các bản thiết kế tính năng (`tasks/`). Đây là nguồn chân lý duy nhất (Single Source of Truth).
+- **`.agents/skills/` (Miền Agent Skills)**: Hiện thực hóa bộ ba kỹ năng SDD:
+  - **`sdd-planner`**: Phân tích yêu cầu, đối chiếu `constitution.md` và khởi tạo đặc tả kỹ thuật chuẩn hóa trong `.specify/tasks/`.
+  - **`sdd-coder`**: Lập trình mã nguồn trong `src/` bám sát các ràng buộc phạm vi (Scope Boundaries) của bản spec.
+  - **`sdd-verifier`**: Tự động kiểm toán mã nguồn đối chiếu với từng tiêu chí nghiệm thu (Acceptance Criteria) trong bản spec.
+- **`src/`**: Mã nguồn sản phẩm, được sinh ra có kiểm soát và truy vết trực tiếp tới spec đã duyệt.
 
 ---
 
-## 🚀 Khởi tạo nhanh với CLI
+## Khởi tạo dự án
 
-Bạn có thể nhanh chóng khởi tạo một dự án mới theo chuẩn Nexus Kit bằng công cụ dòng lệnh:
+Khởi tạo một dự án mới bằng công cụ CLI không phụ thuộc thư viện ngoài (Zero-dependency):
 
 ```bash
-# Cách 1: Sử dụng npx (khuyên dùng)
+# Cách 1: Sử dụng npx (Khuyên dùng)
 npx create-nexus-kit my-project
 
-# Cách 2: Sử dụng Curl (không cần cài trước Node.js)
+# Cách 2: Sử dụng Shell Script
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 ```
 
 ---
 
-## 📁 Kiến trúc thư mục
+## Cấu trúc thư mục
 
-- **`.specify/`**: Nơi chứa bộ luật (`constitution.md`), mẫu đặc tả (`templates/spec-template.md`) và các bản thiết kế tính năng (`tasks/`). Đây là "pháp luật và nguồn chân lý" của dự án.
-- **`.agents/skills/`**: Nơi chứa bộ ba kỹ năng SDD định hướng hành vi cho AI:
-  - `sdd-planner`: Lập kế hoạch kiến trúc và sinh spec.
-  - `sdd-coder`: Lập trình tất định bám sát spec.
-  - `sdd-verifier`: Kiểm toán code đối chiếu tiêu chí nghiệm thu.
-- **`src/`**: Nơi chứa mã nguồn thực tế của sản phẩm.
+```text
+nexus-kit/
+├── .specify/                         # Miền Spec Kit
+│   ├── constitution.md               # Quy chuẩn kỹ thuật & công nghệ
+│   ├── templates/                    # Mẫu đặc tả kỹ thuật
+│   │   └── spec-template.md
+│   └── tasks/                        # Các bản đặc tả tính năng
+├── .agents/skills/                   # Miền Agent Skills
+│   ├── sdd-planner/SKILL.md          # Lập kế hoạch kiến trúc & đặc tả
+│   ├── sdd-coder/SKILL.md            # Triển khai mã nguồn tất định
+│   └── sdd-verifier/SKILL.md         # Kiểm toán đối chiếu tiêu chí spec
+├── src/                              # Mã nguồn ứng dụng
+├── create-nexus-kit/                 # Gói công cụ dòng lệnh (npm)
+├── .github/workflows/ci.yml          # Đường ống CI tự động
+├── CONTRIBUTING.md                   # Hướng dẫn đóng góp
+├── README.md                         # Tài liệu tiếng Anh
+├── README.vi.md                      # Tài liệu tiếng Việt
+└── LICENSE                           # Giấy phép MIT
+```
 
 ---
 
-## 🤖 Quy trình vận hành cho AI Agent
+## Quy trình vận hành AI Agent
 
 ```
-Người dùng yêu cầu ➔ sdd-planner lập Spec ➔ Con người duyệt ➔ sdd-coder viết Code ➔ sdd-verifier kiểm toán
+Yêu cầu ➔ sdd-planner (Tạo Spec) ➔ Cổng duyệt của Con người ➔ sdd-coder (Viết Code) ➔ sdd-verifier (Kiểm toán)
 ```
 
-1. **Lập kế hoạch (Planning)**: Gọi Agent yêu cầu lập kế hoạch tính năng (Agent kích hoạt `sdd-planner`, nạp `spec-template.md`, sinh spec vào `.specify/tasks/`).
-2. **Con người phê duyệt (Human Gate)**: Xem xét và duyệt bản spec trước khi cho phép viết code.
-3. **Triển khai (Coding)**: Yêu cầu Agent tiến hành code (Agent kích hoạt `sdd-coder`, viết code chuẩn xác vào `src/` kèm test).
-4. **Kiểm toán chất lượng (Verification)**: Agent kích hoạt `sdd-verifier` để tự đối chiếu toàn bộ Acceptance Criteria trước khi hoàn tất task.
+1. **Lập kế hoạch**: Yêu cầu Agent thiết kế tính năng. Agent kích hoạt `sdd-planner`, nạp `spec-template.md` và tạo bản đặc tả tại `.specify/tasks/`.
+2. **Cổng phê duyệt**: Con người rà soát và phê duyệt bản đặc tả trước khi cho phép sinh mã nguồn.
+3. **Triển khai**: Yêu cầu Agent tiến hành lập trình. Agent kích hoạt `sdd-coder` để viết code tường minh, có kiểu dữ liệu chặt chẽ trong `src/`.
+4. **Kiểm toán**: Agent kích hoạt `sdd-verifier` để đối chiếu toàn bộ tiêu chí Acceptance Criteria trước khi hoàn tất công việc.
 
 ---
 
-## 📜 Bản quyền, Pháp lý & Tuyên bố miễn trừ
+## Bản quyền & Quản trị
 
-### 1. Giấy phép bản quyền (License)
-Dự án được phân phối dưới giấy phép **[MIT License](LICENSE)** © 2026 [Tran Huu Quyet](https://github.com/TranHuuQuyet).  
-Bạn hoàn toàn có quyền tự do sử dụng, chỉnh sửa, tích hợp, phân phối lại hoặc thương mại hóa dự án này mà không bị ràng buộc bản quyền thương mại.
+### Giấy phép
+Dự án được phân phối theo giấy phép mã nguồn mở [MIT License](LICENSE) © 2026 [Tran Huu Quyet](https://github.com/TranHuuQuyet).
 
-### 2. Ghi nhận nguồn gốc & Tiêu chuẩn mở (Attribution & Upstream Paradigms)
-Nexus Kit là một dự án mã nguồn mở độc lập, kết hợp và tôn trọng các tiêu chuẩn mở thượng nguồn:
-- **[Spec Kit](https://github.com/github/spec-kit)**: Cung cấp tư tưởng và cấu trúc đặc tả hướng quy chuẩn (Specification-Driven Development).
-- **[Agent Skills Standard](https://github.com/anthropics/agent-skills)**: Cung cấp tiêu chuẩn định dạng kỹ năng mở cho AI Agents (`SKILL.md`).
+### Ghi nhận nguồn gốc
+Nexus Kit là một dự án độc lập, kế thừa và tích hợp các tiêu chuẩn mở:
+- **[Spec Kit](https://github.com/github/spec-kit)**: Tư tưởng và quy chuẩn phát triển hướng đặc tả (SDD).
+- **[Agent Skills](https://github.com/anthropics/agent-skills)**: Tiêu chuẩn mở về định dạng và môi trường thực thi kỹ năng cho AI Agent.
 
-### 3. Tuyên bố miễn trừ trách nhiệm (AI Governance Disclaimer)
-Phần mềm này cùng các quy tắc và mẫu lệnh AI được cung cấp theo nguyên trạng (**"AS IS"**), không đi kèm bất kỳ sự bảo đảm nào. Người dùng và doanh nghiệp có trách nhiệm rà soát, kiểm thử và phê duyệt mọi dòng mã nguồn do AI Agent sinh ra trước khi đưa vào môi trường vận hành thực tế (Production). Tác giả không chịu trách nhiệm đối với bất kỳ rủi ro, lỗi logic hoặc thiệt hại nào phát sinh từ việc sử dụng mã nguồn do AI sinh ra.
+### Tuyên bố miễn trừ
+Phần mềm, các mẫu tài liệu và hướng dẫn agent được cung cấp theo nguyên trạng ("AS IS"), không đi kèm bất kỳ bảo đảm nào. Người dùng chịu trách nhiệm kiểm thử, đánh giá và phê duyệt toàn bộ mã nguồn do AI Agent sinh ra trước khi đưa vào môi trường vận hành thực tế.

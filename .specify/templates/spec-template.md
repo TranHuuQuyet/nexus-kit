@@ -1,4 +1,4 @@
-# [SPEC-ID]: [Feature Title] 🎯
+# [SPEC-ID]: [Feature Title]
 
 > **Status:** `Draft` | `In Review` | `Approved` | `In Progress` | `Completed`  
 > **Author:** [AI Agent / Engineer]  

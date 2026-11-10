@@ -34,7 +34,7 @@ const TEMPLATES = {
 4. TECH STACK: [Người dùng sẽ cập nhật công nghệ cụ thể tại đây]
 `,
 
-  specTemplate: `# [SPEC-ID]: [Feature Title] 🎯
+  specTemplate: `# [SPEC-ID]: [Feature Title]
 
 > **Status:** \`Draft\` | \`In Review\` | \`Approved\` | \`In Progress\` | \`Completed\`  
 > **Author:** [AI Agent / Engineer]  
@@ -173,7 +173,7 @@ Trigger this skill when code has been implemented by \`sdd-coder\`, before commi
    - If any AC fails, provide actionable instructions for \`sdd-coder\` to fix.
 `,
 
-  readme: (projectName) => `# ${projectName} 🌌
+  readme: (projectName) => `# ${projectName}
 
 **The Ultimate Integration Framework for Spec Kit & Agent Skills**
 

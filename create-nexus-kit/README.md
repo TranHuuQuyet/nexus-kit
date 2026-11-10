@@ -1,52 +1,43 @@
-# create-nexus-kit 🌌
+# create-nexus-kit
 
 <p align="center">
   <b>English</b> | <a href="https://github.com/TranHuuQuyet/nexus-kit/blob/main/README.vi.md"><b>Tiếng Việt</b></a>
 </p>
 
-[![npm version](https://img.shields.io/npm/v/create-nexus-kit.svg)](https://www.npmjs.com/package/create-nexus-kit)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)](https://nodejs.org)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](package.json)
-
-> **Scaffold a production-grade Nexus Kit project in seconds.**  
-> The ultimate orchestration layer seamlessly integrating **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate AI "vibe coding".
+<p align="center">
+  <a href="https://www.npmjs.com/package/create-nexus-kit"><img src="https://img.shields.io/npm/v/create-nexus-kit.svg" alt="npm version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen" alt="Node.js Version" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies" /></a>
+</p>
 
 ---
 
-## 🔗 Prerequisites & Integration Philosophy
+## Overview
 
-Nexus Kit does not reinvent the wheel. It serves as the **harness and glue** connecting two powerful upstream paradigms:
+`create-nexus-kit` is the official CLI tool to scaffold production-grade **Nexus Kit** projects. It sets up an integrated environment combining **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate unstructured AI code generation.
+
+---
+
+## Prerequisites & Architecture
+
+Nexus Kit connects two open upstream specifications:
 
 1. **[Spec Kit](https://github.com/github/spec-kit)**: Powers the `.specify/` directory, maintaining the project constitution, tasks, and specification lifecycle.
 2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Powers the `.agents/skills/` directory, providing standardized behaviors for AI agents.
 
-Nexus Kit bridges them by supplying two specialized, bidirectional adapter skills:
+Nexus Kit bridges them with a specialized SDD triad:
 - **`sdd-planner`**: Teaches the agent to respect Spec Kit guardrails and produce standardized task specs.
 - **`sdd-coder`**: Teaches the agent to read Spec Kit tasks and coordinate with coding skills to produce deterministic implementations in `src/`.
+- **`sdd-verifier`**: Audits implementation against all Acceptance Criteria defined in the task spec.
 
 ---
 
-## 💡 Why Nexus Kit?
+## Quick Start
 
-Large Language Models and AI coding assistants are extraordinarily capable, but when left unchecked, they fall into **"Vibe Coding"**:
-- Jumping straight to code without understanding architecture.
-- Hallucinating unneeded libraries and patterns.
-- Silently bypassing edge cases and types.
-- Breaking existing functionality across iterations.
+### Method 1: Using npx (Recommended)
 
-**Nexus Kit** establishes an uncompromising engineering framework:
-1. **Constitution First:** Every AI agent must read `.specify/constitution.md` before doing anything.
-2. **Spec Before Code:** No code is written until a structured specification is planned in `.specify/tasks/`.
-3. **Deterministic Skills:** AI agents operate through explicit skills (`sdd-planner` and `sdd-coder`) to plan, verify, and implement deterministically.
-
----
-
-## 🚀 Quick Start
-
-### Method 1: Using NPX (Recommended)
-
-No installation required. Run directly with Node.js:
+No global installation required:
 
 ```bash
 # Scaffold in a new folder
@@ -56,17 +47,17 @@ npx create-nexus-kit my-app
 npx create-nexus-kit .
 ```
 
-### Method 2: Using Curl (Zero Node prerequisite for bootstrapping)
+### Method 2: Using Shell Script
 
 ```bash
 # Default project name (nexus-kit-app)
-curl -sL https://raw.githubusercontent.com/TranHuuQuyet/create-nexus-kit/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 
 # Custom project name
-curl -sL https://raw.githubusercontent.com/TranHuuQuyet/create-nexus-kit/main/install.sh | bash -s -- my-app
+curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash -s -- my-app
 ```
 
-### Method 3: Global NPM Install
+### Method 3: Global npm Installation
 
 ```bash
 npm install -g create-nexus-kit
@@ -75,51 +66,45 @@ create-nexus-kit my-app
 
 ---
 
-## 📁 Generated Project Structure
+## Generated Project Structure
 
 ```text
 my-app/
-├── .agents/
-│   └── skills/
-│       ├── sdd-planner/
-│       │   └── SKILL.md       # Skill: Generate architecture & task specifications
-│       └── sdd-coder/
-│           └── SKILL.md       # Skill: Write modular code strictly adhering to specs
 ├── .specify/
-│   ├── constitution.md        # The project's Core Laws (Anti-Vibe-Coding, Types, Quality Gates)
-│   ├── tasks/                 # Active and completed feature specifications (.md)
-│   └── templates/             # Reusable specification templates
-├── src/                       # Production application code
-├── .gitignore                 # Pre-configured standard exclusions
+│   ├── constitution.md        # Engineering guidelines & constraints
+│   ├── templates/             # Specification templates
+│   │   └── spec-template.md
+│   └── tasks/                 # Feature specifications
+├── .agents/skills/
+│   ├── sdd-planner/SKILL.md   # Requirements elicitation & specification
+│   ├── sdd-coder/SKILL.md     # Deterministic implementation
+│   └── sdd-verifier/SKILL.md  # Specification compliance audit
+├── src/                       # Application source code
+├── .gitignore                 # Standard exclusions
 └── README.md                  # Project overview & agent instructions
 ```
 
 ---
 
-## 🤖 The SDD Agent Workflow
+## Agent Protocol
 
-```mermaid
-flowchart LR
-    A[User Request] --> B[sdd-planner Skill]
-    B --> C[.specify/constitution.md]
-    B --> D[Generate Task Spec in .specify/tasks/]
-    D --> E[Human Review & Approval]
-    E --> F[sdd-coder Skill]
-    F --> G[Modular Code in src/]
+```
+Request ➔ sdd-planner (Draft Spec) ➔ Human Review Gate ➔ sdd-coder (Implement) ➔ sdd-verifier (Audit)
 ```
 
-1. **Plan**: Prompt your AI agent to design a feature. The agent triggers `sdd-planner`, reads `constitution.md`, asks clarifying questions, and writes `.specify/tasks/<feature>-spec.md`.
-2. **Approve**: Review the generated specification (Data models, API contracts, Edge cases).
+1. **Plan**: Prompt your AI agent to design a feature. The agent triggers `sdd-planner`, reads `constitution.md`, and drafts `.specify/tasks/<feature>-spec.md`.
+2. **Approve**: Review and approve the generated specification (Data models, API contracts, Edge cases).
 3. **Build**: Prompt the agent to implement the approved spec. The agent activates `sdd-coder` to write exact, type-safe code in `src/`.
+4. **Verify**: The agent triggers `sdd-verifier` to audit all Acceptance Criteria before completion.
 
 ---
 
-## 🛠️ Maintainer & Publishing Guide
+## Maintainer Guide
 
-To publish `create-nexus-kit` to the npm registry:
+To publish an update to the npm registry:
 
 ```bash
-# 1. Login to npm (if not already logged in)
+# 1. Login to npm
 npm login
 
 # 2. Test locally
@@ -131,6 +116,6 @@ npm publish --access public
 
 ---
 
-## 📄 License
+## License
 
 [MIT](LICENSE) © [Tran Huu Quyet](https://github.com/TranHuuQuyet)
