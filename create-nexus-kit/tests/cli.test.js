@@ -127,20 +127,39 @@ describe('validateProject & CLI --doctor (P1)', () => {
 
   test('fully configured project yields 0 failures and 0 warnings', () => {
     scaffoldProject(tmpDir, { projectName: 'prod-app' });
+    const constPath = path.join(tmpDir, '.specify/constitution.md');
+    const updatedConst = fs
+      .readFileSync(constPath, 'utf8')
+      .replace('[Người dùng sẽ cập nhật công nghệ cụ thể tại đây]', 'TypeScript + Node.js 20');
+    fs.writeFileSync(constPath, updatedConst, 'utf8');
+
+    const specPath = path.join(tmpDir, '.specify/tasks/001-init-spec.md');
     fs.writeFileSync(
-      path.join(tmpDir, '.specify/constitution.md'),
-      '# Core\n4. TECH STACK: TypeScript + Node.js 20\n',
+      specPath,
+      '# SPEC-001: Init\n\n> **Status:** `Draft`\n> **Version:** `1.0.0`\n\n- [ ] **AC-1**: Initial setup.\n',
       'utf8'
     );
-    fs.writeFileSync(
-      path.join(tmpDir, '.specify/tasks/001-init-spec.md'),
-      '# SPEC-001: Init\n',
-      'utf8'
-    );
+    const approveProc = spawnSync(process.execPath, [CLI_PATH, '--approve', specPath], { encoding: 'utf8' });
+    assert.equal(approveProc.status, 0);
 
     const proc = spawnSync(process.execPath, [CLI_PATH, '--doctor', tmpDir], { encoding: 'utf8' });
     assert.equal(proc.status, 0);
     assert.match(stripAnsi(proc.stdout), /10 passed, 0 warnings, 0 failed/);
+  });
+
+  test('fails when constitution.md lacks mandatory laws or skill chain is broken', () => {
+    scaffoldProject(tmpDir, { projectName: 'broken-laws-app' });
+    fs.writeFileSync(path.join(tmpDir, '.specify/constitution.md'), '# Loose rules only\n', 'utf8');
+    fs.writeFileSync(
+      path.join(tmpDir, '.agents/skills/sdd-coder/SKILL.md'),
+      '---\nname: sdd-coder\ndescription: Missing chain references\n---\n## When to use\nAlways\n## Workflow\nJust write code.\n',
+      'utf8'
+    );
+
+    const report = validateProject(tmpDir);
+    assert.equal(report.exitCode, 1);
+    assert.ok(report.results.some((r) => r.status === 'FAIL' && r.category === 'constitution'));
+    assert.ok(report.results.some((r) => r.status === 'FAIL' && r.category === 'skill:sdd-coder' && r.message.includes('Broken workflow chain')));
   });
 
   test('fails with exit code 1 when mandatory files are missing', () => {

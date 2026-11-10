@@ -1,8 +1,12 @@
 # [SPEC-ID]: [Feature Title]
 
-> **Status:** `Draft` | `In Review` | `Approved` | `In Progress` | `Completed`  
+> **Status:** `Draft`  
+> **Version:** `1.0.0`  
 > **Author:** [AI Agent / Engineer]  
 > **Date:** [YYYY-MM-DD]  
+> **Approved-By:** `Pending`  
+> **Approved-At:** `Pending`  
+> **Approved-Hash:** `Pending`  
 > **Upstream Spec Kit:** Compatible with Spec Kit v1.0+  
 > **Target Path:** `src/...`
 
@@ -14,7 +18,6 @@
 *Mô tả ngắn gọn bối cảnh và vấn đề thực tế cần giải quyết.*
 
 ### 1.2 User Stories
-- **As a** `[vai trò người dùng]`, **I want** `[hành động / chức năng]` **so that** `[giá trị mang lại]`.
 - **As a** `[vai trò người dùng]`, **I want** `[hành động / chức năng]` **so that** `[giá trị mang lại]`.
 
 ### 1.3 Scope Boundaries (Ranh giới phạm vi)
@@ -66,10 +69,16 @@ flowchart TD
 
 ## 5. Acceptance Criteria (Tiêu chí nghiệm thu)
 
-*Mọi code được sinh ra phải vượt qua 100% các tiêu chí dưới đây:*
-
 - [ ] **AC-1**: Dữ liệu đầu vào bắt buộc được validate qua schema tường minh.
 - [ ] **AC-2**: Thực thi đúng luồng xử lý và trả về đúng hợp đồng đã cam kết.
 - [ ] **AC-3**: Xử lý đầy đủ các trường hợp biên tại mục 4.
 - [ ] **AC-4**: Không sử dụng `any`, tuân thủ 100% `constitution.md`.
 - [ ] **AC-5**: Có unit test bao phủ luồng chính và ít nhất 2 trường hợp lỗi biên.
+
+---
+
+## 6. Change Log
+
+| Version | Date | Author | Summary |
+| :--- | :--- | :--- | :--- |
+| `1.0.0` | `[YYYY-MM-DD]` | `[Author]` | Initial draft specification. |

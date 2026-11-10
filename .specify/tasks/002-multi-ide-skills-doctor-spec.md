@@ -4,6 +4,9 @@
 > **Author:** Senior Tooling Engineer (via `sdd-planner`)  
 > **Date:** 2026-11-10  
 > **Target Path:** `.agents/skills/`, `.cursor/`, `.github/`, `CLAUDE.md`, `create-nexus-kit/`
+> **Approved-By:** `Tran Huu Quyet`  
+> **Approved-At:** `2026-11-10T07:08:33.109Z`  
+> **Approved-Hash:** `sha256:1a644771928f5e9cc6eba8ec8e893253f759a7e6310947a67f3bb85adbcf3c1c`  
 
 ---
 

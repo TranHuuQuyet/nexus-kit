@@ -96,7 +96,13 @@ npx create-nexus-kit . --force
 # Method 2: Using Shell Script
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 
-# Run deep YAML, structure, and cross-reference validation
+# Approve a spec and stamp its canonical SHA-256 hash
+npx create-nexus-kit --approve .specify/tasks/001-feature-spec.md
+
+# Verify a spec is approved and not stale before coding
+npx create-nexus-kit --verify-spec .specify/tasks/001-feature-spec.md
+
+# Run full Nexus Kit integrity validation (specs, hashes, skills, adapters, template parity)
 npx create-nexus-kit --doctor
 ```
 

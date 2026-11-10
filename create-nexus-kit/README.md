@@ -50,7 +50,13 @@ npx create-nexus-kit .
 # Overwrite existing files intentionally
 npx create-nexus-kit . --force
 
-# Run deep YAML, structure, and cross-reference validation
+# Approve a spec and stamp its canonical SHA-256 hash
+npx create-nexus-kit --approve .specify/tasks/001-feature-spec.md
+
+# Verify a spec is approved and not stale before coding
+npx create-nexus-kit --verify-spec .specify/tasks/001-feature-spec.md
+
+# Run full Nexus Kit integrity validation (specs, hashes, skills, adapters)
 npx create-nexus-kit --doctor
 ```
 

@@ -2,7 +2,13 @@
 
 import path from 'node:path';
 import process from 'node:process';
-import { VERSION, scaffoldProject, validateProject } from '../lib/nexus.js';
+import {
+  VERSION,
+  approveSpec,
+  verifySpecForCoding,
+  scaffoldProject,
+  validateProject
+} from '../lib/nexus.js';
 
 const c = {
   reset: '\x1b[0m',
@@ -30,27 +36,33 @@ function printHelp() {
 ${c.bold}Usage:${c.reset}
   npx create-nexus-kit [project-name] [options]
   npx create-nexus-kit --doctor [target-dir]
+  npx create-nexus-kit --approve <spec-file> [--by <reviewer>]
+  npx create-nexus-kit --verify-spec <spec-file>
 
 ${c.bold}Arguments:${c.reset}
   [project-name]     Name of the directory to create (default: nexus-kit-app)
 
 ${c.bold}Options:${c.reset}
-  -f, --force        Overwrite existing files if they already exist
-  --doctor, --check  Run deep validation checks on an existing Nexus Kit project
-  -h, --help         Show this help message
-  -v, --version      Show version number
+  -f, --force             Overwrite existing files if they already exist
+  --doctor, --check       Run full integrity & lifecycle validation on a project
+  --approve <spec-file>   Approve a spec and stamp its canonical SHA-256 hash
+  --by <name>             Reviewer name when using --approve
+  --verify-spec <file>    Verify spec is Approved and not stale/modified since approval
+  -h, --help              Show this help message
+  -v, --version           Show version number
 
 ${c.bold}Examples:${c.reset}
   ${c.dim}$${c.reset} npx create-nexus-kit my-awesome-app
-  ${c.dim}$${c.reset} npx create-nexus-kit .
   ${c.dim}$${c.reset} npx create-nexus-kit . --force
+  ${c.dim}$${c.reset} npx create-nexus-kit --approve .specify/tasks/001-auth-spec.md
+  ${c.dim}$${c.reset} npx create-nexus-kit --verify-spec .specify/tasks/001-auth-spec.md
   ${c.dim}$${c.reset} npx create-nexus-kit --doctor
 `);
 }
 
 function runDoctor(targetDir) {
   console.log(BANNER);
-  console.log(`${c.blue}ℹ${c.reset} Running Nexus Kit Validator at ${c.dim}${targetDir}${c.reset}\n`);
+  console.log(`${c.blue}ℹ${c.reset} Running Nexus Kit Integrity Validator at ${c.dim}${targetDir}${c.reset}\n`);
 
   const report = validateProject(targetDir);
 
@@ -67,14 +79,54 @@ function runDoctor(targetDir) {
   console.log(`\n${c.bold}Summary:${c.reset} ${c.green}${report.passCount} passed${c.reset}, ${c.yellow}${report.warnCount} warnings${c.reset}, ${c.red}${report.failCount} failed${c.reset}\n`);
 
   if (report.failCount > 0) {
-    console.log(`${c.red}${c.bold}✘ Validation failed:${c.reset} Resolve [FAIL] items above before proceeding.\n`);
+    console.log(`${c.red}${c.bold}✘ Integrity check failed:${c.reset} Resolve [FAIL] items above before proceeding.\n`);
   } else if (report.warnCount > 0) {
-    console.log(`${c.yellow}${c.bold}! Validation passed with warnings:${c.reset} Core structure is valid; review [WARN] suggestions above.\n`);
+    console.log(`${c.yellow}${c.bold}! Integrity check passed with warnings:${c.reset} Core structure is valid; review [WARN] suggestions above.\n`);
   } else {
-    console.log(`${c.green}${c.bold}✔ All checks passed!${c.reset} Nexus Kit environment is fully configured.\n`);
+    console.log(`${c.green}${c.bold}✔ All integrity checks passed!${c.reset} Nexus Kit environment is healthy.\n`);
   }
 
   process.exit(report.exitCode);
+}
+
+function runApprove(specFileArg, approverName) {
+  if (!specFileArg || specFileArg.startsWith('-')) {
+    console.error(`${c.red}[FAIL]${c.reset} Please specify a spec file path: --approve <spec-file>`);
+    process.exit(1);
+  }
+
+  const fullPath = path.resolve(process.cwd(), specFileArg);
+  try {
+    const res = approveSpec(fullPath, { by: approverName });
+    console.log(BANNER);
+    console.log(`${c.green}[PASS]${c.reset} Specification approved and stamped!`);
+    console.log(`  ${c.dim}File:${c.reset}        ${res.specPath}`);
+    console.log(`  ${c.dim}Status:${c.reset}      ${c.green}${res.status}${c.reset}`);
+    console.log(`  ${c.dim}Approved-By:${c.reset} ${res.approvedBy}`);
+    console.log(`  ${c.dim}Hash:${c.reset}        ${c.cyan}${res.hash}${c.reset}\n`);
+    process.exit(0);
+  } catch (err) {
+    console.error(`${c.red}[FAIL]${c.reset} ${err.message}`);
+    process.exit(1);
+  }
+}
+
+function runVerifySpec(specFileArg) {
+  if (!specFileArg || specFileArg.startsWith('-')) {
+    console.error(`${c.red}[FAIL]${c.reset} Please specify a spec file path: --verify-spec <spec-file>`);
+    process.exit(1);
+  }
+
+  const fullPath = path.resolve(process.cwd(), specFileArg);
+  const res = verifySpecForCoding(fullPath);
+
+  if (res.ready) {
+    console.log(`${c.green}[PASS]${c.reset} Spec ready for sdd-coder (${res.metadata.Status}, ${res.hash})`);
+    process.exit(0);
+  } else {
+    console.error(`${c.red}[FAIL]${c.reset} Spec blocked for coding: ${res.reason}`);
+    process.exit(1);
+  }
 }
 
 function run() {
@@ -88,6 +140,20 @@ function run() {
   if (args.includes('-v') || args.includes('--version')) {
     console.log(`create-nexus-kit v${VERSION}`);
     process.exit(0);
+  }
+
+  const approveIdx = args.indexOf('--approve');
+  if (approveIdx !== -1) {
+    const byIdx = args.indexOf('--by');
+    const approver = byIdx !== -1 ? args[byIdx + 1] : undefined;
+    runApprove(args[approveIdx + 1], approver);
+    return;
+  }
+
+  const verifyIdx = args.indexOf('--verify-spec');
+  if (verifyIdx !== -1) {
+    runVerifySpec(args[verifyIdx + 1]);
+    return;
   }
 
   const doctorIndex = args.findIndex((a) => a === '--doctor' || a === '--check');
@@ -134,8 +200,8 @@ function run() {
     console.log(`  1. Open the project in your AI editor (Antigravity, Claude Code, Cursor, GitHub Copilot)`);
   }
   console.log(`  3. Update technology guidelines in ${c.cyan}.specify/constitution.md${c.reset}`);
-  console.log(`  4. Run ${c.cyan}npx create-nexus-kit --doctor${c.reset} anytime to validate configuration`);
-  console.log(`  5. Plan via ${c.yellow}sdd-planner${c.reset}, build via ${c.yellow}sdd-coder${c.reset}, and audit via ${c.yellow}sdd-verifier${c.reset}\n`);
+  console.log(`  4. Approve specs with ${c.cyan}npx create-nexus-kit --approve <spec-file>${c.reset}`);
+  console.log(`  5. Run ${c.cyan}npx create-nexus-kit --doctor${c.reset} anytime for full integrity checks\n`);
 }
 
 run();

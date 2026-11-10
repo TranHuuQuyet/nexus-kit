@@ -96,7 +96,13 @@ npx create-nexus-kit . --force
 # Cách 2: Sử dụng Shell Script
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 
-# Chạy kiểm định sâu YAML frontmatter, cấu trúc và liên kết chéo
+# Phê duyệt Spec và đóng dấu mã băm SHA-256 (chống sửa đổi lén hoặc spec lỗi thời)
+npx create-nexus-kit --approve .specify/tasks/001-feature-spec.md
+
+# Kiểm tra Spec đã được duyệt và còn nguyên vẹn trước khi Coder triển khai
+npx create-nexus-kit --verify-spec .specify/tasks/001-feature-spec.md
+
+# Chạy kiểm định toàn vẹn hệ thống (specs, hashes, skills, adapters, template parity)
 npx create-nexus-kit --doctor
 ```
 

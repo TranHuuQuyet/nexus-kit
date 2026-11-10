@@ -103,9 +103,13 @@ EOF
 safe_write ".specify/templates/spec-template.md" << 'EOF'
 # [SPEC-ID]: [Feature Title]
 
-> **Status:** `Draft` | `In Review` | `Approved` | `In Progress` | `Completed`  
+> **Status:** `Draft`  
+> **Version:** `1.0.0`  
 > **Author:** [AI Agent / Engineer]  
 > **Date:** [YYYY-MM-DD]  
+> **Approved-By:** `Pending`  
+> **Approved-At:** `Pending`  
+> **Approved-Hash:** `Pending`  
 > **Upstream Spec Kit:** Compatible with Spec Kit v1.0+  
 > **Target Path:** `src/...`
 
@@ -138,6 +142,11 @@ export interface EntityModel {
 }
 ```
 
+### 2.2 API / CLI / Component Contracts
+- **Input / Signature:**
+- **Output / Return Type:**
+- **Failure Responses:**
+
 ---
 
 ## 3. Logic Flow & State Transitions
@@ -168,21 +177,30 @@ flowchart TD
 - [ ] **AC-3**: Xử lý đầy đủ các trường hợp biên tại mục 4.
 - [ ] **AC-4**: Không sử dụng `any`, tuân thủ 100% `constitution.md`.
 - [ ] **AC-5**: Có unit test bao phủ luồng chính và ít nhất 2 trường hợp lỗi biên.
+
+---
+
+## 6. Change Log
+
+| Version | Date | Author | Summary |
+| :--- | :--- | :--- | :--- |
+| `1.0.0` | `[YYYY-MM-DD]` | `[Author]` | Initial draft specification. |
 EOF
 
 safe_write ".agents/skills/sdd-planner/SKILL.md" << 'EOF'
 ---
 name: sdd-planner
-description: Skill to generate architecture and task specifications using Spec Kit.
+description: Skill to generate architecture and task specifications using Spec Kit with approval versioning and change management.
 ---
 # SDD Planner Skill
 
 ## When to use
-Trigger this skill when the user asks to plan a feature, design architecture, modify system behavior, or create a task specification.
+Trigger this skill when the user asks to plan a feature, design architecture, modify requirements on an existing spec, or create a task specification.
 
 ## Hard Guardrails
 - **NEVER write or modify application code in `src/` during the planning phase.**
 - **Do NOT assume ambiguous requirements.** Surface assumptions explicitly and ask clarifying questions before finalizing a spec.
+- **CHANGE MANAGEMENT**: If modifying an already-approved spec, you MUST increment `Version`, record the change in `## Change Log`, reset `Status` to `In Review`, and set `Approved-Hash` to `Pending`.
 
 ## Workflow
 1. **Read Constitution**: ALWAYS read `.specify/constitution.md` first to verify tech stack constraints, typing rules, and quality gates.
@@ -197,16 +215,17 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
    - Map Logic Flows & State Transitions using Mermaid diagrams.
    - Enumerate Edge Cases (null/empty input, network timeout, idempotency, boundary limits).
    - Assign verifiable Acceptance Criteria IDs (`AC-1`, `AC-2`, etc.).
-6. **Save Specification**:
+6. **Version & Save Specification**:
+   - Set `Status: Draft` (or `In Review` for changes), `Version: 1.0.0` (or bumped semantic version), and `Approved-Hash: Pending`.
    - Save into `.specify/tasks/` with an incrementing numeric prefix and descriptive kebab-case name (e.g., `002-feature-name-spec.md`).
 7. **Human Approval Gate**:
-   - Present a summary of the spec and explicitly ask the user to review and approve it before `sdd-coder` is permitted to execute.
+   - Present a summary of the spec and instruct the user to approve it (e.g., by running `npx create-nexus-kit --approve .specify/tasks/<file>.md`) before `sdd-coder` is permitted to execute.
 EOF
 
 safe_write ".agents/skills/sdd-coder/SKILL.md" << 'EOF'
 ---
 name: sdd-coder
-description: Skill to write code strictly based on generated specifications.
+description: Skill to write code strictly based on approved, non-stale specifications.
 ---
 # SDD Coder Skill
 
@@ -215,11 +234,15 @@ Trigger this skill when the user asks to implement code or complete a task that 
 
 ## Hard Guardrails
 - **NO SPEC, NO CODE**: Refuse to write code if no corresponding specification exists in `.specify/tasks/`. Redirect to `sdd-planner` instead.
+- **APPROVAL & DRIFT GATE**: NEVER implement a spec whose `Status` is `Draft`, `In Review`, or `Superseded`, or whose `Approved-Hash` fails integrity verification (`npx create-nexus-kit --verify-spec <spec-path>`). If requirements changed after approval, stop and require human re-approval first.
 - **ZERO SCOPE CREEP**: Implement ONLY items explicitly defined in the spec's `In-Scope` section. Never touch unrelated files or perform unsolicited refactoring.
 - **NO HALLUCINATED DEPENDENCIES**: Never install third-party packages not authorized in the spec or `.specify/constitution.md`.
 
 ## Workflow
-1. **Verify Target Spec**: Identify and completely read the approved specification file in `.specify/tasks/`. Confirm its status is `Approved` or explicitly cleared by the user.
+1. **Verify Approval & Integrity Gate**:
+   - Read the target specification in `.specify/tasks/` completely.
+   - Verify `Status` is `Approved` or `In Progress`.
+   - Run `npx create-nexus-kit --verify-spec .specify/tasks/<spec-file>.md` (or verify `Approved-Hash`) to confirm the spec is neither unapproved nor stale/modified since approval.
 2. **Enforce Constitution**: Read `.specify/constitution.md` to strictly honor the project's tech stack, strict typing (no `any` or blind casts), and error handling standards.
 3. **Incremental, Type-Safe Implementation**:
    - Write modular, single-responsibility files inside `src/` conforming strictly to the spec's Domain Models and Interface Contracts.
@@ -233,7 +256,7 @@ EOF
 safe_write ".agents/skills/sdd-verifier/SKILL.md" << 'EOF'
 ---
 name: sdd-verifier
-description: Skill to verify and audit implemented code against task specifications and constitution guardrails.
+description: Skill to verify and audit implemented code against approved task specifications, integrity hashes, and constitution guardrails.
 ---
 # SDD Verifier Skill
 
@@ -242,20 +265,23 @@ Trigger this skill immediately after `sdd-coder` finishes implementing code, bef
 
 ## Hard Guardrails
 - **ZERO TRUST AUDIT**: Never assume an implementation works or matches the spec by memory. Read the actual source files and observe live command outputs.
-- **NO PARTIAL PASSES**: All Acceptance Criteria (`AC-1`..`AC-N`) and all tests must pass without skipped assertions.
+- **NO PARTIAL PASSES**: All Acceptance Criteria (`AC-1`..`AC-N`) and all tests must pass without skipped assertions. Never mark `Status: Completed` if any AC remains unchecked (`- [ ]`).
 
 ## Workflow
-1. **Extract Spec Contract**: Read the target specification document in `.specify/tasks/`. Extract all Acceptance Criteria (`AC-1`, `AC-2`...), `In-Scope` bounds, `Out-of-Scope` prohibitions, and `Edge Cases`.
+1. **Extract Spec Contract & Integrity**:
+   - Read the target specification document in `.specify/tasks/`.
+   - Verify `Approved-Hash` integrity has not drifted unexpectedly during implementation.
+   - Extract all Acceptance Criteria (`AC-1`, `AC-2`...), `In-Scope` bounds, `Out-of-Scope` prohibitions, and `Edge Cases`.
 2. **Build Traceability Matrix**:
    - Inspect files in `src/` and map every Acceptance Criterion to the exact file path and line range implementing it.
    - Verify no `Out-of-Scope` code or unauthorized dependencies were introduced.
 3. **Constitution Compliance Check**:
    - Audit code against `.specify/constitution.md`: verify explicit types (no `any`), structured validation (no loose string parsing), and proper error handling.
 4. **Run Automated Gates**:
-   - Execute tests, type checks, and linters directly in the terminal and observe full outputs.
-5. **Emit Verification Report**:
+   - Execute project tests, type checks, and linters directly in the terminal and observe full outputs.
+5. **Finalize & Emit Verification Report**:
    - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
-   - If any check fails, block completion and hand specific remediation items back to `sdd-coder`.
+   - Only if all checks pass: mark ACs as `- [x]` and update `Status` to `Completed`. Otherwise block completion and hand specific remediation items back to `sdd-coder`.
 EOF
 
 safe_write "AGENTS.md" << 'EOF'

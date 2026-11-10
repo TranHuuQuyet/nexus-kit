@@ -4,6 +4,9 @@
 > **Author:** Senior Tooling Engineer (via `sdd-planner`)  
 > **Date:** 2026-11-10  
 > **Target Path:** `AGENTS.md`, `create-nexus-kit/`, `.github/workflows/ci.yml`, `README.md`, `README.vi.md`
+> **Approved-By:** `Tran Huu Quyet`  
+> **Approved-At:** `2026-11-10T07:08:33.204Z`  
+> **Approved-Hash:** `sha256:92b9ba9e7ac165d0c6eaa459734be6ef73aea66ac1a3e3c954c206eb35ca8be5`  
 
 ---
 
