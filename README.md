@@ -57,12 +57,34 @@ npx create-nexus-kit my-project
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 ```
 
-## Kiến trúc thư mục
-- **`.specify/`**: Nơi chứa bộ luật (`constitution.md`) và các bản thiết kế tính năng (`tasks/`). Đây là "pháp luật" của dự án.
-- **`.agents/skills/`**: Nơi chứa các kỹ năng (Skills) định hướng hành vi cho AI. Đây là "bộ não quy trình" giúp AI biết cách đọc luật và viết code đúng chuẩn.
-- **`src/`**: Nơi chứa mã nguồn thực tế.
+## 📁 Kiến trúc thư mục
+- **`.specify/`**: Nơi chứa bộ luật (`constitution.md`), mẫu đặc tả (`templates/spec-template.md`) và các bản thiết kế tính năng (`tasks/`). Đây là "pháp luật và nguồn chân lý" của dự án.
+- **`.agents/skills/`**: Nơi chứa bộ ba kỹ năng SDD định hướng hành vi cho AI:
+  - `sdd-planner`: Lập kế hoạch kiến trúc và sinh spec.
+  - `sdd-coder`: Lập trình tất định bám sát spec.
+  - `sdd-verifier`: Kiểm toán code đối chiếu tiêu chí nghiệm thu.
+- **`src/`**: Nơi chứa mã nguồn thực tế của sản phẩm.
 
-## Cách sử dụng cho Agent
-1. Gọi Agent và yêu cầu lập kế hoạch tính năng (Agent sẽ dùng `sdd-planner` skill).
-2. Duyệt bản spec được tạo trong `.specify/tasks/`.
-3. Yêu cầu Agent tiến hành code (Agent sẽ dùng `sdd-coder` skill).
+---
+
+## 🤖 Quy trình vận hành cho AI Agent
+1. **Lập kế hoạch (Planning)**: Gọi Agent yêu cầu lập kế hoạch tính năng (Agent kích hoạt `sdd-planner`, nạp `spec-template.md`, sinh spec vào `.specify/tasks/`).
+2. **Con người phê duyệt (Human Gate)**: Xem xét và duyệt bản spec trước khi cho phép viết code.
+3. **Triển khai (Coding)**: Yêu cầu Agent tiến hành code (Agent kích hoạt `sdd-coder`, viết code chuẩn xác vào `src/` kèm test).
+4. **Kiểm toán chất lượng (Verification)**: Agent kích hoạt `sdd-verifier` để tự đối chiếu toàn bộ Acceptance Criteria trước khi hoàn tất task.
+
+---
+
+## 📜 Bản quyền, Pháp lý & Tuyên bố miễn trừ
+
+### 1. Giấy phép bản quyền (License)
+Dự án được phân phối dưới giấy phép **[MIT License](LICENSE)** © 2026 [Tran Huu Quyet](https://github.com/TranHuuQuyet).  
+Bạn hoàn toàn có quyền tự do sử dụng, chỉnh sửa, tích hợp, phân phối lại hoặc thương mại hóa dự án này mà không bị ràng buộc bản quyền thương mại.
+
+### 2. Ghi nhận nguồn gốc & Tiêu chuẩn mở (Attribution & Upstream Paradigms)
+Nexus Kit là một dự án mã nguồn mở độc lập, kết hợp và tôn trọng các tiêu chuẩn mở thượng nguồn:
+- **[Spec Kit](https://github.com/github/spec-kit)**: Cung cấp tư tưởng và cấu trúc đặc tả hướng quy chuẩn (Specification-Driven Development).
+- **[Agent Skills Standard](https://github.com/anthropics/agent-skills)**: Cung cấp tiêu chuẩn định dạng kỹ năng mở cho AI Agents (`SKILL.md`).
+
+### 3. Tuyên bố miễn trừ trách nhiệm (AI Governance Disclaimer)
+Phần mềm này cùng các quy tắc và mẫu lệnh AI được cung cấp theo nguyên trạng (**"AS IS"**), không đi kèm bất kỳ sự bảo đảm nào. Người dùng và doanh nghiệp có trách nhiệm rà soát, kiểm thử và phê duyệt mọi dòng mã nguồn do AI Agent sinh ra trước khi đưa vào môi trường vận hành thực tế (Production). Tác giả không chịu trách nhiệm đối với bất kỳ rủi ro, lỗi logic hoặc thiệt hại nào phát sinh từ việc sử dụng mã nguồn do AI sinh ra.
