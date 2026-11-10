@@ -6,7 +6,20 @@
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](package.json)
 
 > **Scaffold a production-grade Nexus Kit project in seconds.**  
-> The intersection of **Spec Kit** (laws & guardrails) and **Agent Skills** (disciplined execution) to eliminate AI "vibe coding".
+> The ultimate orchestration layer seamlessly integrating **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate AI "vibe coding".
+
+---
+
+## 🔗 Prerequisites & Integration Philosophy
+
+Nexus Kit does not reinvent the wheel. It serves as the **harness and glue** connecting two powerful upstream paradigms:
+
+1. **[Spec Kit](https://github.com/github/spec-kit)**: Powers the `.specify/` directory, maintaining the project constitution, tasks, and specification lifecycle.
+2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Powers the `.agents/skills/` directory, providing standardized behaviors for AI agents.
+
+Nexus Kit bridges them by supplying two specialized, bidirectional adapter skills:
+- **`sdd-planner`**: Teaches the agent to respect Spec Kit guardrails and produce standardized task specs.
+- **`sdd-coder`**: Teaches the agent to read Spec Kit tasks and coordinate with coding skills to produce deterministic implementations in `src/`.
 
 ---
 
