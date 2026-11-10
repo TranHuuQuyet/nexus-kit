@@ -28,7 +28,7 @@ jobs:
           cd create-nexus-kit
           npm pack --dry-run
 
-      - name: Test CLI Scaffolding
+      - name: Test CLI Scaffolding & Doctor
         run: |
           node create-nexus-kit/bin/index.js test-app
           test -f test-app/.specify/constitution.md
@@ -36,8 +36,12 @@ jobs:
           test -f test-app/.agents/skills/sdd-planner/SKILL.md
           test -f test-app/.agents/skills/sdd-coder/SKILL.md
           test -f test-app/.agents/skills/sdd-verifier/SKILL.md
+          test -f test-app/CLAUDE.md
+          test -f test-app/.cursor/rules/nexus-kit.mdc
+          test -f test-app/.github/copilot-instructions.md
           test -f test-app/README.md
           test -f test-app/.gitignore
+          node create-nexus-kit/bin/index.js --doctor test-app
           rm -rf test-app
 
       - name: Test Bash Install Script
@@ -48,7 +52,14 @@ jobs:
           test -f test-bash-app/.agents/skills/sdd-planner/SKILL.md
           test -f test-bash-app/.agents/skills/sdd-coder/SKILL.md
           test -f test-bash-app/.agents/skills/sdd-verifier/SKILL.md
+          test -f test-bash-app/CLAUDE.md
+          test -f test-bash-app/.cursor/rules/nexus-kit.mdc
+          test -f test-bash-app/.github/copilot-instructions.md
+          node create-nexus-kit/bin/index.js --doctor test-bash-app
           rm -rf test-bash-app
+
+      - name: Run Doctor on Root Repository
+        run: node create-nexus-kit/bin/index.js --doctor .
 
   validate-skills:
     name: Validate Agent Skills Standard

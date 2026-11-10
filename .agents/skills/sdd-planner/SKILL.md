@@ -5,16 +5,26 @@ description: Skill to generate architecture and task specifications using Spec K
 # SDD Planner Skill
 
 ## When to use
-Trigger this skill when the user asks to plan a feature, design architecture, or create a task specification.
+Trigger this skill when the user asks to plan a feature, design architecture, modify system behavior, or create a task specification.
+
+## Hard Guardrails
+- **NEVER write or modify application code in `src/` during the planning phase.**
+- **Do NOT assume ambiguous requirements.** Surface assumptions explicitly and ask clarifying questions before finalizing a spec.
 
 ## Workflow
-1. **Read Constitution**: ALWAYS read `.specify/constitution.md` first to understand the project guardrails and tech stack.
-2. **Load Template**: Load `.specify/templates/spec-template.md` as the blueprint.
-3. **Elicit Requirements**: If the user's request is ambiguous, ask clarifying questions one at a time. Explicitly state assumptions.
-4. **Author Specification**:
-   - Define User Stories, strict In-Scope and Out-of-Scope boundaries.
-   - Specify deterministic Data Models, Types, and Interfaces.
-   - Detail the Logic Flow with Mermaid diagrams.
-   - Enumerate Edge Cases and concrete Acceptance Criteria (AC-1, AC-2, etc.).
-5. **Save Document**: Save into `.specify/tasks/` with an incrementing ID and descriptive name (e.g., `002-feature-name-spec.md`).
-6. **Gate Check**: Prompt the user to review and approve the specification before any code is written.
+1. **Read Constitution**: ALWAYS read `.specify/constitution.md` first to verify tech stack constraints, typing rules, and quality gates.
+2. **Load Spec Kit Blueprint**: Read `.specify/templates/spec-template.md` as the mandatory structural template.
+3. **Clarifying Interview & Assumptions**:
+   - Surface hidden assumptions immediately (e.g., auth mechanism, storage engine, validation library).
+   - If the request is underspecified, ask concise clarifying questions one at a time until requirements are concrete.
+4. **Enforce Strict Scope Lock**:
+   - Partition capabilities into **In-Scope** (explicitly required) and **Out-of-Scope** (explicitly excluded to prevent AI scope creep).
+5. **Author Deterministic Contracts**:
+   - Define explicit Domain Models / Schemas (TypeScript interfaces, Zod/JSON schemas, error types).
+   - Map Logic Flows & State Transitions using Mermaid diagrams.
+   - Enumerate Edge Cases (null/empty input, network timeout, idempotency, boundary limits).
+   - Assign verifiable Acceptance Criteria IDs (`AC-1`, `AC-2`, etc.).
+6. **Save Specification**:
+   - Save into `.specify/tasks/` with an incrementing numeric prefix and descriptive kebab-case name (e.g., `002-feature-name-spec.md`).
+7. **Human Approval Gate**:
+   - Present a summary of the spec and explicitly ask the user to review and approve it before `sdd-coder` is permitted to execute.

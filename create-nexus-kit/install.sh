@@ -43,13 +43,15 @@ mkdir -p "$PROJECT_DIR/.specify/tasks"
 mkdir -p "$PROJECT_DIR/.agents/skills/sdd-planner"
 mkdir -p "$PROJECT_DIR/.agents/skills/sdd-coder"
 mkdir -p "$PROJECT_DIR/.agents/skills/sdd-verifier"
+mkdir -p "$PROJECT_DIR/.cursor/rules"
+mkdir -p "$PROJECT_DIR/.github"
 mkdir -p "$PROJECT_DIR/src"
 
 # Keep empty git folders
 touch "$PROJECT_DIR/.specify/tasks/.gitkeep"
 touch "$PROJECT_DIR/src/.gitkeep"
 
-echo -e "${YELLOW}→ Generating templates and configurations...${NC}"
+echo -e "${YELLOW}→ Generating templates, skills, and IDE adapters...${NC}"
 
 # .specify/constitution.md
 cat << 'EOF' > "$PROJECT_DIR/.specify/constitution.md"
@@ -143,19 +145,29 @@ description: Skill to generate architecture and task specifications using Spec K
 # SDD Planner Skill
 
 ## When to use
-Trigger this skill when the user asks to plan a feature, design architecture, or create a task specification.
+Trigger this skill when the user asks to plan a feature, design architecture, modify system behavior, or create a task specification.
+
+## Hard Guardrails
+- **NEVER write or modify application code in `src/` during the planning phase.**
+- **Do NOT assume ambiguous requirements.** Surface assumptions explicitly and ask clarifying questions before finalizing a spec.
 
 ## Workflow
-1. **Read Constitution**: ALWAYS read `.specify/constitution.md` first to understand the project guardrails and tech stack.
-2. **Load Template**: Load `.specify/templates/spec-template.md` as the blueprint.
-3. **Elicit Requirements**: If the user's request is ambiguous, ask clarifying questions one at a time. Explicitly state assumptions.
-4. **Author Specification**:
-   - Define User Stories, strict In-Scope and Out-of-Scope boundaries.
-   - Specify deterministic Data Models, Types, and Interfaces.
-   - Detail the Logic Flow with Mermaid diagrams.
-   - Enumerate Edge Cases and concrete Acceptance Criteria (AC-1, AC-2, etc.).
-5. **Save Document**: Save into `.specify/tasks/` with an incrementing ID and descriptive name (e.g., `002-feature-name-spec.md`).
-6. **Gate Check**: Prompt the user to review and approve the specification before any code is written.
+1. **Read Constitution**: ALWAYS read `.specify/constitution.md` first to verify tech stack constraints, typing rules, and quality gates.
+2. **Load Spec Kit Blueprint**: Read `.specify/templates/spec-template.md` as the mandatory structural template.
+3. **Clarifying Interview & Assumptions**:
+   - Surface hidden assumptions immediately (e.g., auth mechanism, storage engine, validation library).
+   - If the request is underspecified, ask concise clarifying questions one at a time until requirements are concrete.
+4. **Enforce Strict Scope Lock**:
+   - Partition capabilities into **In-Scope** (explicitly required) and **Out-of-Scope** (explicitly excluded to prevent AI scope creep).
+5. **Author Deterministic Contracts**:
+   - Define explicit Domain Models / Schemas (TypeScript interfaces, Zod/JSON schemas, error types).
+   - Map Logic Flows & State Transitions using Mermaid diagrams.
+   - Enumerate Edge Cases (null/empty input, network timeout, idempotency, boundary limits).
+   - Assign verifiable Acceptance Criteria IDs (`AC-1`, `AC-2`, etc.).
+6. **Save Specification**:
+   - Save into `.specify/tasks/` with an incrementing numeric prefix and descriptive kebab-case name (e.g., `002-feature-name-spec.md`).
+7. **Human Approval Gate**:
+   - Present a summary of the spec and explicitly ask the user to review and approve it before `sdd-coder` is permitted to execute.
 EOF
 echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-planner/SKILL.md"
 
@@ -168,17 +180,23 @@ description: Skill to write code strictly based on generated specifications.
 # SDD Coder Skill
 
 ## When to use
-Trigger this skill when the user asks to implement code or complete a task that has already been planned in the `.specify/tasks/` directory.
+Trigger this skill when the user asks to implement code or complete a task that has already been planned and approved in the `.specify/tasks/` directory.
+
+## Hard Guardrails
+- **NO SPEC, NO CODE**: Refuse to write code if no corresponding specification exists in `.specify/tasks/`. Redirect to `sdd-planner` instead.
+- **ZERO SCOPE CREEP**: Implement ONLY items explicitly defined in the spec's `In-Scope` section. Never touch unrelated files or perform unsolicited refactoring.
+- **NO HALLUCINATED DEPENDENCIES**: Never install third-party packages not authorized in the spec or `.specify/constitution.md`.
 
 ## Workflow
-1. **Target Specification**: Select and completely read the target specification file in `.specify/tasks/`. Verify it is in `Approved` or active status.
-2. **Review Constitution**: Read `.specify/constitution.md` to enforce the project's tech stack, typing conventions, and error handling rules.
-3. **Deterministic Implementation**:
-   - Write modular, type-safe code in `src/` matching the exact data models and interfaces defined in the spec.
-   - Strictly adhere to `In-Scope` items. Do NOT hallucinate features, endpoints, or unapproved dependencies.
-4. **Test-Driven Verification**:
-   - Author automated tests verifying both happy paths and documented edge cases.
-5. **Invoke Verification**: Hand off to `sdd-verifier` to perform the final compliance audit against all Acceptance Criteria.
+1. **Verify Target Spec**: Identify and completely read the approved specification file in `.specify/tasks/`. Confirm its status is `Approved` or explicitly cleared by the user.
+2. **Enforce Constitution**: Read `.specify/constitution.md` to strictly honor the project's tech stack, strict typing (no `any` or blind casts), and error handling standards.
+3. **Incremental, Type-Safe Implementation**:
+   - Write modular, single-responsibility files inside `src/` conforming strictly to the spec's Domain Models and Interface Contracts.
+   - Handle every documented Edge Case explicitly (never leave empty `catch {}` blocks or silent failures).
+4. **Automated Test Verification**:
+   - Write unit/integration tests verifying the happy path and every negative/edge case defined in the spec.
+   - Run the test suite and ensure all tests pass with zero warnings.
+5. **Handover to Verifier**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion.
 EOF
 echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-coder/SKILL.md"
 
@@ -191,22 +209,79 @@ description: Skill to verify and audit implemented code against task specificati
 # SDD Verifier Skill
 
 ## When to use
-Trigger this skill when code has been implemented by `sdd-coder`, before committing or merging, or when the user asks to verify/audit whether a task in `.specify/tasks/` is completed.
+Trigger this skill immediately after `sdd-coder` finishes implementing code, before committing or opening a pull request, or when the user asks to audit whether a task in `.specify/tasks/` is genuinely complete.
+
+## Hard Guardrails
+- **ZERO TRUST AUDIT**: Never assume an implementation works or matches the spec by memory. Read the actual source files and observe live command outputs.
+- **NO PARTIAL PASSES**: All Acceptance Criteria (`AC-1`..`AC-N`) and all tests must pass without skipped assertions.
 
 ## Workflow
-1. **Locate Task Spec**: Read the target specification document in `.specify/tasks/`.
-2. **Extract Criteria**: Identify all Acceptance Criteria (AC-1, AC-2, etc.), In-Scope bounds, and Out-of-Scope restrictions.
-3. **Audit Implementation**:
-   - Inspect files in `src/` to verify every AC is implemented.
-   - Verify that NO Out-of-Scope logic or unapproved dependencies were introduced.
-   - Verify adherence to `.specify/constitution.md` (no `any`, explicit types, proper error handling).
-4. **Run Verification Commands**:
-   - Run type checks and test suites.
-5. **Output Verification Report**:
-   - Present a checklist of all ACs with `[PASSED]` or `[FAILED]` status.
-   - If any AC fails, provide actionable instructions for `sdd-coder` to fix.
+1. **Extract Spec Contract**: Read the target specification document in `.specify/tasks/`. Extract all Acceptance Criteria (`AC-1`, `AC-2`...), `In-Scope` bounds, `Out-of-Scope` prohibitions, and `Edge Cases`.
+2. **Build Traceability Matrix**:
+   - Inspect files in `src/` and map every Acceptance Criterion to the exact file path and line range implementing it.
+   - Verify no `Out-of-Scope` code or unauthorized dependencies were introduced.
+3. **Constitution Compliance Check**:
+   - Audit code against `.specify/constitution.md`: verify explicit types (no `any`), structured validation (no loose string parsing), and proper error handling.
+4. **Run Automated Gates**:
+   - Execute tests, type checks, and linters directly in the terminal and observe full outputs.
+5. **Emit Verification Report**:
+   - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
+   - If any check fails, block completion and hand specific remediation items back to `sdd-coder`.
 EOF
 echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .agents/skills/sdd-verifier/SKILL.md"
+
+# CLAUDE.md
+cat << 'EOF' > "$PROJECT_DIR/CLAUDE.md"
+# CLAUDE.md — Nexus Kit SDD Protocol
+
+This project is governed by **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Rules
+1. **NO VIBE CODING**: Never write or modify code in `src/` without an approved specification in `.specify/tasks/`.
+2. **Read Constitution First**: Always check `.specify/constitution.md` before planning or coding.
+3. **Use SDD Skills** (located in `.agents/skills/`):
+   - Planning a feature -> Follow `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`.
+   - Implementing a spec -> Follow `.agents/skills/sdd-coder/SKILL.md`.
+   - Auditing implementation -> Follow `.agents/skills/sdd-verifier/SKILL.md`.
+EOF
+echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} CLAUDE.md"
+
+# .cursor/rules/nexus-kit.mdc
+cat << 'EOF' > "$PROJECT_DIR/.cursor/rules/nexus-kit.mdc"
+---
+description: Enforce Nexus Kit Spec-Driven Development (SDD) Constitution and Skills workflow
+globs:
+alwaysApply: true
+---
+
+# Nexus Kit — Spec-Driven Development Rules
+
+This repository uses **Nexus Kit**. You must enforce these rules on every interaction:
+
+1. **NO VIBE CODING**: Do NOT write or edit application code in `src/` unless an approved specification exists in `.specify/tasks/`.
+2. **READ CONSTITUTION**: Always read `.specify/constitution.md` first to verify tech stack constraints and coding standards.
+3. **FOLLOW THE SDD TRIAD** (in `.agents/skills/`):
+   - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`, clarify requirements, and save the spec into `.specify/tasks/`. Wait for human approval before coding.
+   - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within the `In-Scope` bounds of the approved spec.
+   - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
+EOF
+echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .cursor/rules/nexus-kit.mdc"
+
+# .github/copilot-instructions.md
+cat << 'EOF' > "$PROJECT_DIR/.github/copilot-instructions.md"
+# GitHub Copilot Instructions — Nexus Kit
+
+This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
+
+## Mandatory Directives
+- **No Spec, No Code**: Never generate or modify code in `src/` without verifying that an approved specification exists in `.specify/tasks/`.
+- **Constitution First**: Always read `.specify/constitution.md` to respect project tech stack and type-safety guidelines.
+- **Follow Skills**:
+  - For planning/architecture: follow `.agents/skills/sdd-planner/SKILL.md` and use `.specify/templates/spec-template.md`.
+  - For implementation: follow `.agents/skills/sdd-coder/SKILL.md` and stay strictly within `In-Scope` bounds.
+  - For verification: follow `.agents/skills/sdd-verifier/SKILL.md` to audit against Acceptance Criteria.
+EOF
+echo -e "  ${GREEN}✔${NC} ${DIM}Created${NC} .github/copilot-instructions.md"
 
 # README.md
 cat << EOF > "$PROJECT_DIR/README.md"
@@ -219,6 +294,7 @@ Nexus Kit là lớp điều phối và tích hợp tối ưu (Orchestration Laye
 ## Kiến trúc thư mục
 - **\`.specify/\`**: Nơi chứa bộ luật (\`constitution.md\`), mẫu đặc tả (\`templates/\`) và các bản thiết kế tính năng (\`tasks/\`).
 - **\`.agents/skills/\`**: Nơi chứa bộ ba kỹ năng SDD: \`sdd-planner\`, \`sdd-coder\`, và \`sdd-verifier\`.
+- **\`CLAUDE.md\`, \`.cursor/rules/\`, \`.github/copilot-instructions.md\`**: Các cầu nối tự động kích hoạt luật cho Claude Code, Cursor và GitHub Copilot.
 - **\`src/\`**: Nơi chứa mã nguồn thực tế.
 
 ## Quy trình làm việc cho Agent
@@ -254,7 +330,7 @@ echo -e "${BOLD}Next steps:${NC}"
 if [ "$PROJECT_NAME" != "." ]; then
   echo -e "  1. ${CYAN}cd ${PROJECT_NAME}${NC}"
 fi
-echo -e "  2. Open the project in your AI-powered editor (Antigravity, Cursor, etc.)"
+echo -e "  2. Open the project in your AI-powered editor (Antigravity, Cursor, Claude Code, Copilot)"
 echo -e "  3. Update technology guidelines in ${CYAN}.specify/constitution.md${NC}"
-echo -e "  4. Let AI plan features using ${YELLOW}sdd-planner${NC}, implement using ${YELLOW}sdd-coder${NC}, and verify with ${YELLOW}sdd-verifier${NC}\n"
-echo -e "${DIM}Happy deterministic coding! 🚀${NC}\n"
+echo -e "  4. Let AI plan via ${YELLOW}sdd-planner${NC}, build via ${YELLOW}sdd-coder${NC}, and audit via ${YELLOW}sdd-verifier${NC}\n"
+echo -e "${DIM}Happy deterministic coding!${NC}\n"

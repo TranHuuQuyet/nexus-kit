@@ -15,7 +15,7 @@
 
 ## Overview
 
-`create-nexus-kit` is the official CLI tool to scaffold production-grade **Nexus Kit** projects. It sets up an integrated environment combining **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate unstructured AI code generation.
+`create-nexus-kit` is the official zero-dependency CLI to scaffold production-grade **Nexus Kit** projects. It establishes an integrated environment connecting **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate unstructured AI code generation ("vibe coding") across Claude Code, Cursor, GitHub Copilot, and Antigravity.
 
 ---
 
@@ -26,10 +26,11 @@ Nexus Kit connects two open upstream specifications:
 1. **[Spec Kit](https://github.com/github/spec-kit)**: Powers the `.specify/` directory, maintaining the project constitution, tasks, and specification lifecycle.
 2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Powers the `.agents/skills/` directory, providing standardized behaviors for AI agents.
 
-Nexus Kit bridges them with a specialized SDD triad:
-- **`sdd-planner`**: Teaches the agent to respect Spec Kit guardrails and produce standardized task specs.
-- **`sdd-coder`**: Teaches the agent to read Spec Kit tasks and coordinate with coding skills to produce deterministic implementations in `src/`.
-- **`sdd-verifier`**: Audits implementation against all Acceptance Criteria defined in the task spec.
+Nexus Kit bridges them with a production-grade SDD triad and Multi-IDE adapters:
+- **`sdd-planner`**: Conducts clarifying interviews, enforces scope lock, and authors formal specifications into `.specify/tasks/`.
+- **`sdd-coder`**: Implements approved specifications in `src/` with strict typing, zero scope creep, and automated tests.
+- **`sdd-verifier`**: Performs zero-trust audits building a traceability matrix against all Acceptance Criteria.
+- **Multi-IDE Adapters**: Generates `CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, and `.github/copilot-instructions.md` for seamless enforcement across editors.
 
 ---
 
@@ -45,6 +46,9 @@ npx create-nexus-kit my-app
 
 # Or scaffold inside the current directory
 npx create-nexus-kit .
+
+# Run health diagnostics on an existing project
+npx create-nexus-kit --doctor
 ```
 
 ### Method 2: Using Shell Script
@@ -71,17 +75,20 @@ create-nexus-kit my-app
 ```text
 my-app/
 ├── .specify/
-│   ├── constitution.md        # Engineering guidelines & constraints
-│   ├── templates/             # Specification templates
+│   ├── constitution.md               # Engineering guidelines & constraints
+│   ├── templates/                    # Specification templates
 │   │   └── spec-template.md
-│   └── tasks/                 # Feature specifications
+│   └── tasks/                        # Feature specifications
 ├── .agents/skills/
-│   ├── sdd-planner/SKILL.md   # Requirements elicitation & specification
-│   ├── sdd-coder/SKILL.md     # Deterministic implementation
-│   └── sdd-verifier/SKILL.md  # Specification compliance audit
-├── src/                       # Application source code
-├── .gitignore                 # Standard exclusions
-└── README.md                  # Project overview & agent instructions
+│   ├── sdd-planner/SKILL.md          # Requirements elicitation & specification
+│   ├── sdd-coder/SKILL.md            # Deterministic implementation
+│   └── sdd-verifier/SKILL.md         # Specification compliance audit
+├── .cursor/rules/nexus-kit.mdc       # Cursor IDE rules
+├── .github/copilot-instructions.md   # GitHub Copilot instructions
+├── CLAUDE.md                         # Claude Code instructions
+├── src/                              # Application source code
+├── .gitignore                        # Standard exclusions
+└── README.md                         # Project overview & agent instructions
 ```
 
 ---
@@ -92,9 +99,9 @@ my-app/
 Request ➔ sdd-planner (Draft Spec) ➔ Human Review Gate ➔ sdd-coder (Implement) ➔ sdd-verifier (Audit)
 ```
 
-1. **Plan**: Prompt your AI agent to design a feature. The agent triggers `sdd-planner`, reads `constitution.md`, and drafts `.specify/tasks/<feature>-spec.md`.
+1. **Plan**: Prompt your AI agent to design a feature. The agent triggers `sdd-planner`, reads `constitution.md`, asks clarifying questions, and drafts `.specify/tasks/<feature>-spec.md`.
 2. **Approve**: Review and approve the generated specification (Data models, API contracts, Edge cases).
-3. **Build**: Prompt the agent to implement the approved spec. The agent activates `sdd-coder` to write exact, type-safe code in `src/`.
+3. **Build**: Prompt the agent to implement the approved spec. The agent activates `sdd-coder` to write exact, type-safe code and tests in `src/`.
 4. **Verify**: The agent triggers `sdd-verifier` to audit all Acceptance Criteria before completion.
 
 ---

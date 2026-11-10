@@ -1,0 +1,16 @@
+---
+description: Enforce Nexus Kit Spec-Driven Development (SDD) Constitution and Skills workflow
+globs:
+alwaysApply: true
+---
+
+# Nexus Kit — Spec-Driven Development Rules
+
+This repository uses **Nexus Kit**. You must enforce these rules on every interaction:
+
+1. **NO VIBE CODING**: Do NOT write or edit application code in `src/` unless an approved specification exists in `.specify/tasks/`.
+2. **READ CONSTITUTION**: Always read `.specify/constitution.md` first to verify tech stack constraints and coding standards.
+3. **FOLLOW THE SDD TRIAD** (in `.agents/skills/`):
+   - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`, clarify requirements, and save the spec into `.specify/tasks/`. Wait for human approval before coding.
+   - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within the `In-Scope` bounds of the approved spec.
+   - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.

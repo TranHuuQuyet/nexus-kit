@@ -8,14 +8,14 @@
   <a href="https://www.npmjs.com/package/create-nexus-kit"><img src="https://img.shields.io/npm/v/create-nexus-kit.svg" alt="npm version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="https://github.com/TranHuuQuyet/nexus-kit/actions"><img src="https://github.com/TranHuuQuyet/nexus-kit/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies" /></a>
+  <a href="create-nexus-kit/package.json"><img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies" /></a>
 </p>
 
 ---
 
 ## Overview
 
-Nexus Kit is an orchestration framework that bridges **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards). It establishes a disciplined, deterministic engineering environment designed to eliminate unstructured AI code generation.
+Nexus Kit is an orchestration framework that bridges **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards). It establishes a disciplined, deterministic engineering environment designed to eliminate unstructured AI code generation ("vibe coding") across all major AI IDEs.
 
 ---
 
@@ -41,10 +41,12 @@ flowchart LR
         direction TB
         SpecDir[".specify/\n(constitution.md, tasks, templates)"]
         SkillsDir[".agents/skills/\n(sdd-planner, sdd-coder, sdd-verifier)"]
+        Adapters["Multi-IDE Adapters\n(CLAUDE.md, Cursor, Copilot)"]
     end
 
     SK -. "Domain Structure" .-> SpecDir
     AS -. "Protocol Standard" .-> SkillsDir
+    Adapters -. "Auto-Enforce" .-> SkillsDir
 
     SpecDir <-->|"Contracts & Quality Gates"| SkillsDir
     SkillsDir -->|"Deterministic Code"| Src["src/"]
@@ -53,10 +55,11 @@ flowchart LR
 ### Component Roles
 
 - **`.specify/` (Spec Kit Domain)**: Houses the project constitution (`constitution.md`), reusable templates (`templates/`), and active task specifications (`tasks/`). Serves as the single source of truth.
-- **`.agents/skills/` (Agent Skills Domain)**: Implements the SDD triad:
-  - **`sdd-planner`**: Analyzes requirements, checks `constitution.md`, and authors formal specifications into `.specify/tasks/`.
-  - **`sdd-coder`**: Implements approved specifications in `src/` with strict scope boundaries.
-  - **`sdd-verifier`**: Audits implementation against all Acceptance Criteria defined in the task spec.
+- **`.agents/skills/` (Agent Skills Domain)**: Implements the production-grade SDD triad:
+  - **`sdd-planner`**: Conducts clarifying interviews, enforces scope lock, and authors formal specifications into `.specify/tasks/`.
+  - **`sdd-coder`**: Implements approved specifications in `src/` with strict typing, zero scope creep, and automated tests.
+  - **`sdd-verifier`**: Performs zero-trust audits building a traceability matrix against all Acceptance Criteria.
+- **Multi-IDE Adapters**: Lightweight rule pointers (`CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, `.github/copilot-instructions.md`) ensuring Claude Code, Cursor, GitHub Copilot, and Antigravity automatically enforce Nexus Kit out of the box.
 - **`src/`**: Application source code generated strictly from approved specifications.
 
 ---
@@ -71,6 +74,9 @@ npx create-nexus-kit my-project
 
 # Method 2: Using Shell Script
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
+
+# Run health diagnostics on an existing project
+npx create-nexus-kit --doctor
 ```
 
 ---
@@ -88,6 +94,9 @@ nexus-kit/
 │   ├── sdd-planner/SKILL.md          # Requirements elicitation & specification
 │   ├── sdd-coder/SKILL.md            # Deterministic implementation
 │   └── sdd-verifier/SKILL.md         # Specification compliance audit
+├── .cursor/rules/nexus-kit.mdc       # Cursor IDE automatic rule enforcement
+├── .github/copilot-instructions.md   # GitHub Copilot instructions
+├── CLAUDE.md                         # Claude Code automatic instructions
 ├── src/                              # Application source code
 ├── create-nexus-kit/                 # Scaffolding CLI package (npm)
 ├── .github/workflows/ci.yml          # Automated CI pipeline
@@ -105,9 +114,9 @@ nexus-kit/
 Request ➔ sdd-planner (Draft Spec) ➔ Human Review Gate ➔ sdd-coder (Implement) ➔ sdd-verifier (Audit)
 ```
 
-1. **Planning**: Prompt the agent to design a feature. The agent activates `sdd-planner`, loads `spec-template.md`, and drafts a specification in `.specify/tasks/`.
+1. **Planning**: Prompt the agent to design a feature. The agent activates `sdd-planner`, loads `spec-template.md`, asks clarifying questions, and drafts a specification in `.specify/tasks/`.
 2. **Review Gate**: Review and approve the specification document prior to code generation.
-3. **Implementation**: Direct the agent to implement the approved spec. The agent activates `sdd-coder`, producing typed, modular code in `src/`.
+3. **Implementation**: Direct the agent to implement the approved spec. The agent activates `sdd-coder`, producing typed, modular code and tests in `src/`.
 4. **Verification**: The agent activates `sdd-verifier` to audit all Acceptance Criteria before completion.
 
 ---
