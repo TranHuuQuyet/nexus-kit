@@ -55,14 +55,14 @@ describe('End-to-End SDD Workflow: Planner -> Gate -> Change Mgmt -> Coder -> Ve
 > **Approved-By:** \`Pending\`  
 > **Approved-At:** \`Pending\`  
 > **Approved-Hash:** \`Pending\`  
-> **Target Path:** \`src/slugify.js\`
+> **Target Path:** \`src/slugify.mjs\`
 
 ---
 
 ## 1. Overview & Objective
 ### 1.3 Scope Boundaries
 - **In-Scope:**
-  - \`slugify(input)\` pure function in \`src/slugify.js\`
+  - \`slugify(input)\` pure function in \`src/slugify.mjs\`
 - **Out-of-Scope:**
   - HTML parsing or database storage
 
@@ -152,9 +152,9 @@ describe('End-to-End SDD Workflow: Planner -> Gate -> Change Mgmt -> Coder -> Ve
     });
     assert.equal(verifyReady2.status, 0);
 
-    // 6. CODER PHASE: Implement src/slugify.js and src/slugify.test.js strictly matching spec
+    // 6. CODER PHASE: Implement src/slugify.mjs and src/slugify.test.mjs strictly matching spec
     fs.writeFileSync(
-      path.join(projectDir, 'src/slugify.js'),
+      path.join(projectDir, 'src/slugify.mjs'),
       `export function slugify(input) {
   if (typeof input !== 'string') {
     throw new TypeError('Expected string input for slugify');
@@ -172,10 +172,10 @@ describe('End-to-End SDD Workflow: Planner -> Gate -> Change Mgmt -> Coder -> Ve
     );
 
     fs.writeFileSync(
-      path.join(projectDir, 'src/slugify.test.js'),
+      path.join(projectDir, 'src/slugify.test.mjs'),
       `import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slugify } from './slugify.js';
+import { slugify } from './slugify.mjs';
 
 test('AC-1 & AC-3: slugifies strings and normalizes unicode', () => {
   assert.equal(slugify('  Hello, World! 2026  '), 'hello-world-2026');
@@ -191,11 +191,11 @@ test('AC-2: throws TypeError on non-string inputs', () => {
     );
 
     // Run implementation unit tests
-    const srcTests = spawnSync(process.execPath, ['--test', 'src/slugify.test.js'], {
+    const srcTests = spawnSync(process.execPath, ['--test', 'src/slugify.test.mjs'], {
       cwd: projectDir,
       encoding: 'utf8'
     });
-    assert.equal(srcTests.status, 0);
+    assert.equal(srcTests.status, 0, `src tests failed: ${srcTests.stderr}\n${srcTests.stdout}`);
 
     // 7. VERIFIER PHASE:
     // 7a. Prematurely marking Status: Completed while ACs are unchecked MUST fail --doctor
