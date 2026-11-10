@@ -19,12 +19,12 @@ Nexus Kit là khung điều phối tích hợp giữa **Spec Kit** (quản trị
 
 ---
 
-## Điều kiện tiên quyết
+## Khả năng chạy độc lập & Tương thích
 
-Nexus Kit kết nối hai tiêu chuẩn mở thượng nguồn:
+Nexus Kit **chạy độc lập ngay lập tức** — nó **không chứa mã nguồn** của các repo khác bên trong và **không bắt buộc** bạn phải cài thêm repo nào khác (chỉ cần Node.js `>=18` cho CLI). Đồng thời, toàn bộ cấu trúc tương thích 100% nếu bạn muốn dùng kèm với 2 hệ sinh thái thượng nguồn:
 
-1. **[Spec Kit](https://github.com/github/spec-kit)**: Công cụ và tiêu chuẩn quản lý vòng đời đặc tả (Specification Lifecycle).
-2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Tiêu chuẩn công nghiệp mở định nghĩa hành vi và kỹ năng cho AI Agent (`SKILL.md`).
+1. **[Spec Kit](https://github.com/github/spec-kit)**: Quy chuẩn cho thư mục `.specify/` (`constitution.md`, `templates/`, `tasks/`).
+2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Chuẩn định dạng kỹ năng mở (`SKILL.md`) được các AI IDE hiện đại hỗ trợ sẵn.
 
 ---
 

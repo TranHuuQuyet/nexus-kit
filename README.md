@@ -19,12 +19,12 @@ Nexus Kit is an orchestration framework that bridges **Spec Kit** (specification
 
 ---
 
-## Prerequisites
+## Standalone & Upstream Compatibility
 
-Nexus Kit integrates with two upstream open specifications:
+Nexus Kit works **standalone out of the box**—it does **not** bundle external repository source code, nor do you need to clone or install any external repo (only Node.js `>=18` for the CLI). At the same time, it stays 100% interoperable if you also use upstream ecosystems:
 
-1. **[Spec Kit](https://github.com/github/spec-kit)**: Tooling and standards for specification lifecycle management.
-2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Open industry standard for defining AI agent capabilities (`SKILL.md`).
+1. **[Spec Kit](https://github.com/github/spec-kit)**: Upstream conventions for `.specify/` (`constitution.md`, `templates/`, `tasks/`).
+2. **[Agent Skills](https://github.com/anthropics/agent-skills)**: Open industry standard (`SKILL.md`) natively supported by modern AI coding IDEs.
 
 ---
 
