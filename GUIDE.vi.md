@@ -1,5 +1,9 @@
 # Hướng dẫn sử dụng Nexus Kit (So sánh 2 trường hợp)
 
+<p align="center">
+  <a href="GUIDE.md"><b>English</b></a> | <b>Tiếng Việt</b>
+</p>
+
 Tài liệu này hướng dẫn cách cài đặt và vận hành **Nexus Kit** theo 2 kịch bản thực tế:
 - **Bên A:** Dự án **mới tinh** (chưa có code, chưa có file).
 - **Bên B:** Dự án **đang làm dở** (đã có sẵn mã nguồn, `README.md`, `.gitignore`, cấu trúc thư mục riêng...).
