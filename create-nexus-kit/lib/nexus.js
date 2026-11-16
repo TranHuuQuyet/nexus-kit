@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '1.7.0';
+export const VERSION = '2.0.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -1360,3 +1360,5 @@ export function validateProject(targetDir) {
     exitCode: failCount > 0 ? 1 : 0
   };
 }
+
+export { createMcpServer, runMcpServer, createSpecDraft, MCP_TOOLS, MCP_RESOURCES, MCP_PROMPTS } from './mcp.js';

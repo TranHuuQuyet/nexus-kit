@@ -114,6 +114,9 @@ curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-ne
 ### Daily Lifecycle Commands
 
 ```bash
+# Run native Model Context Protocol (MCP) server over stdio for AI IDEs
+npx create-nexus-kit@latest mcp
+
 # View interactive Terminal Status Board of all task specifications
 npx create-nexus-kit@latest board
 npx create-nexus-kit@latest board --json
@@ -136,6 +139,45 @@ Use `--preset <name>` to pre-configure `.specify/constitution.md` automatically:
 - `nestjs` (or `nest`): `TypeScript 5, NestJS 10, Jest, Prisma`
 - `react` (or `vite`): `TypeScript 5, Vite, React 19, Tailwind CSS, Vitest`
 - `node` (or `minimal`): `Node.js 20+ (ES Modules), Vitest`
+
+### Native Model Context Protocol (MCP) Server
+
+Nexus Kit v2.0+ provides a native, zero-dependency MCP server over `stdio` enabling AI agents (Cursor, Claude Desktop, Antigravity, Windsurf, Cline) to query project rules, inspect specs, and run doctor diagnostics via structured tool calls.
+
+#### 1. Cursor IDE Integration (`.cursor/mcp.json`)
+```json
+{
+  "mcpServers": {
+    "nexus-kit": {
+      "command": "npx",
+      "args": ["create-nexus-kit@latest", "mcp"]
+    }
+  }
+}
+```
+
+#### 2. Claude Desktop Integration (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "nexus-kit": {
+      "command": "npx",
+      "args": ["create-nexus-kit@latest", "mcp"]
+    }
+  }
+}
+```
+
+#### Exposed MCP Capabilities
+- **Tools**:
+  - `nexus_check_constitution`: Reads and verifies project rules and technology constraints.
+  - `nexus_get_specs`: Lists all specifications, statuses, and Acceptance Criteria progress.
+  - `nexus_verify_spec`: Verifies SHA-256 integrity hash to prevent requirement drift.
+  - `nexus_doctor`: Runs full integrity and lifecycle diagnostics.
+  - `nexus_create_spec`: Generates standard task spec draft adhering to Spec Kit.
+  - `nexus_approve_spec`: Human approval gate stamping canonical SHA-256 hash.
+- **Resources**: `nexus://constitution`, `nexus://specs`, `nexus://board`
+- **Prompts**: `sdd_plan`, `sdd_implement`, `sdd_verify`
 
 ---
 

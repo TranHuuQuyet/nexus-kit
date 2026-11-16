@@ -114,6 +114,9 @@ curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-ne
 ### Các lệnh vận hành hằng ngày
 
 ```bash
+# Khởi chạy máy chủ Native Model Context Protocol (MCP) qua stdio cho các AI IDE
+npx create-nexus-kit@latest mcp
+
 # Xem bảng điều khiển trạng thái tiến độ trực quan (Terminal Status Board)
 npx create-nexus-kit@latest board
 npx create-nexus-kit@latest board --json
@@ -136,6 +139,45 @@ Sử dụng cờ `--preset <tên>` để tự động điền cấu hình công 
 - `nestjs` (hoặc `nest`): `TypeScript 5, NestJS 10, Jest, Prisma`
 - `react` (hoặc `vite`): `TypeScript 5, Vite, React 19, Tailwind CSS, Vitest`
 - `node` (hoặc `minimal`): `Node.js 20+ (ES Modules), Vitest`
+
+### Máy chủ Native Model Context Protocol (MCP) Server
+
+Nexus Kit v2.0+ tích hợp sẵn máy chủ MCP chuẩn công nghiệp không phụ thuộc bên ngoài (Zero Dependencies), giao tiếp qua `stdio` (JSON-RPC 2.0) giúp AI Agents (Cursor, Claude Desktop, Antigravity, Windsurf, Cline) truy vấn luật, xem tiến độ spec và chạy chẩn đoán trực tiếp qua tool-calling.
+
+#### 1. Cấu hình Cursor IDE (`.cursor/mcp.json`)
+```json
+{
+  "mcpServers": {
+    "nexus-kit": {
+      "command": "npx",
+      "args": ["create-nexus-kit@latest", "mcp"]
+    }
+  }
+}
+```
+
+#### 2. Cấu hình Claude Desktop (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "nexus-kit": {
+      "command": "npx",
+      "args": ["create-nexus-kit@latest", "mcp"]
+    }
+  }
+}
+```
+
+#### Khả năng MCP cung cấp
+- **Công cụ (Tools)**:
+  - `nexus_check_constitution`: Kiểm tra luật dự án và rào cản công nghệ.
+  - `nexus_get_specs`: Truy xuất danh sách task specs, trạng thái và tỷ lệ hoàn thành AC.
+  - `nexus_verify_spec`: Kiểm tra chữ ký số SHA-256 chống trôi dạt yêu cầu.
+  - `nexus_doctor`: Chẩn đoán toàn diện sức khỏe hệ sinh thái dự án.
+  - `nexus_create_spec`: Tự động tạo bản thảo task spec đúng chuẩn Spec Kit.
+  - `nexus_approve_spec`: Cổng phê duyệt của con người đóng dấu mã băm SHA-256.
+- **Tài nguyên (Resources)**: `nexus://constitution`, `nexus://specs`, `nexus://board`
+- **Prompts chuẩn**: `sdd_plan`, `sdd_implement`, `sdd_verify`
 
 ---
 

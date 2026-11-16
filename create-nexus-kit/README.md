@@ -55,6 +55,9 @@ npx create-nexus-kit@latest init-hooks
 npx create-nexus-kit@latest board
 npx create-nexus-kit@latest board --json
 
+# Run native Model Context Protocol (MCP) server over stdio
+npx create-nexus-kit@latest mcp
+
 # Overwrite existing files intentionally
 npx create-nexus-kit@latest . --force
 
@@ -75,7 +78,30 @@ Pass `--preset <name>` to pre-configure `.specify/constitution.md` automatically
 - `nestjs` (or `nest`): `TypeScript 5, NestJS 10, Jest, Prisma`
 - `react` (or `vite`): `TypeScript 5, Vite, React 19, Tailwind CSS, Vitest`
 - `node` (or `minimal`): `Node.js 20+ (ES Modules), Vitest`
+
+### Native Model Context Protocol (MCP) Server
+
+Nexus Kit v2.0+ includes a native zero-dependency MCP server over `stdio` for AI IDEs:
+
+```json
+// .cursor/mcp.json or Claude Desktop claude_desktop_config.json
+{
+  "mcpServers": {
+    "nexus-kit": {
+      "command": "npx",
+      "args": ["create-nexus-kit@latest", "mcp"]
+    }
+  }
+}
 ```
+
+Exposed MCP Tools:
+- `nexus_check_constitution`: Inspect engineering rules & tech stack.
+- `nexus_get_specs`: Query task progress & hash drift.
+- `nexus_verify_spec`: Validate cryptographic integrity hash.
+- `nexus_doctor`: Run health diagnostics.
+- `nexus_create_spec`: Scaffold task spec drafts.
+- `nexus_approve_spec`: Seal approved task specifications.
 
 ### Method 2: Using Shell Script
 
