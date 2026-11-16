@@ -90,7 +90,7 @@ Initialize a new project safely using the zero-dependency CLI (existing files ar
 
 ```bash
 # Method 1: Using npx (Recommended)
-npx create-nexus-kit@latest my-project --with-hooks
+npx create-nexus-kit@latest my-project --preset nextjs --with-hooks
 
 # Scaffold safely into an existing project (skips existing files)
 npx create-nexus-kit@latest .
@@ -103,8 +103,9 @@ npx create-nexus-kit@latest . --force
 
 # Method 2: Global install (enables short 'nexus-kit' command)
 npm install -g create-nexus-kit
-nexus-kit my-project --with-hooks
+nexus-kit my-project --preset nextjs --with-hooks
 nexus-kit init-hooks
+nexus-kit board
 
 # Method 3: Shell Script (no Node.js prerequisite)
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
@@ -113,6 +114,10 @@ curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-ne
 ### Daily Lifecycle Commands
 
 ```bash
+# View interactive Terminal Status Board of all task specifications
+npx create-nexus-kit@latest board
+npx create-nexus-kit@latest board --json
+
 # Approve a spec and stamp its canonical SHA-256 hash
 npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 
@@ -123,6 +128,14 @@ npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 npx create-nexus-kit@latest --doctor
 ```
 *(After `npm i -g create-nexus-kit`, replace `npx create-nexus-kit@latest` with `nexus-kit`.)*
+
+### Tech Stack Presets
+Use `--preset <name>` to pre-configure `.specify/constitution.md` automatically:
+- `nextjs` (or `next`): `TypeScript 5, Next.js 15 (App Router), Tailwind CSS, Vitest, Zod`
+- `fastapi` (or `python`): `Python 3.12, FastAPI, Pydantic v2, Pytest, SQLAlchemy`
+- `nestjs` (or `nest`): `TypeScript 5, NestJS 10, Jest, Prisma`
+- `react` (or `vite`): `TypeScript 5, Vite, React 19, Tailwind CSS, Vitest`
+- `node` (or `minimal`): `Node.js 20+ (ES Modules), Vitest`
 
 ---
 

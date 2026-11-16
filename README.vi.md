@@ -89,8 +89,8 @@ flowchart LR
 Khởi tạo một dự án mới an toàn (mặc định tự động **bỏ qua các tệp đã tồn tại** để bảo vệ dữ liệu hiện có):
 
 ```bash
-# Cách 1: Sử dụng npx (Khuyên dùng - thêm --with-hooks để kích hoạt ngay rào chắn Git)
-npx create-nexus-kit@latest my-project --with-hooks
+# Cách 1: Sử dụng npx (Khuyên dùng - thêm --preset và --with-hooks để cấu hình trọn gói)
+npx create-nexus-kit@latest my-project --preset nextjs --with-hooks
 
 # Tích hợp an toàn vào dự án đang có sẵn (không ghi đè file cũ)
 npx create-nexus-kit@latest .
@@ -103,8 +103,9 @@ npx create-nexus-kit@latest . --force
 
 # Cách 2: Cài đặt Global (dùng lệnh rút gọn 'nexus-kit')
 npm install -g create-nexus-kit
-nexus-kit my-project --with-hooks
+nexus-kit my-project --preset nextjs --with-hooks
 nexus-kit init-hooks
+nexus-kit board
 
 # Cách 3: Sử dụng Shell Script (không cần cài trước Node.js)
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
@@ -113,6 +114,10 @@ curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-ne
 ### Các lệnh vận hành hằng ngày
 
 ```bash
+# Xem bảng điều khiển trạng thái tiến độ trực quan (Terminal Status Board)
+npx create-nexus-kit@latest board
+npx create-nexus-kit@latest board --json
+
 # Phê duyệt Spec và đóng dấu mã băm SHA-256 (chống sửa đổi lén hoặc spec lỗi thời)
 npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 
@@ -123,6 +128,14 @@ npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 npx create-nexus-kit@latest --doctor
 ```
 *(Sau khi cài `npm i -g create-nexus-kit`, bạn có thể gõ ngắn gọn `nexus-kit` thay cho `npx create-nexus-kit@latest`.)*
+
+### Danh mục Tech Stack Presets
+Sử dụng cờ `--preset <tên>` để tự động điền cấu hình công nghệ chuẩn vào `.specify/constitution.md`:
+- `nextjs` (hoặc `next`): `TypeScript 5, Next.js 15 (App Router), Tailwind CSS, Vitest, Zod`
+- `fastapi` (hoặc `python`): `Python 3.12, FastAPI, Pydantic v2, Pytest, SQLAlchemy`
+- `nestjs` (hoặc `nest`): `TypeScript 5, NestJS 10, Jest, Prisma`
+- `react` (hoặc `vite`): `TypeScript 5, Vite, React 19, Tailwind CSS, Vitest`
+- `node` (hoặc `minimal`): `Node.js 20+ (ES Modules), Vitest`
 
 ---
 

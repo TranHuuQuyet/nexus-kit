@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '1.6.0';
+export const VERSION = '1.7.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -13,6 +13,49 @@ export const VALID_SPEC_STATUSES = [
   'Completed',
   'Superseded'
 ];
+
+export const PRESETS = {
+  nextjs: {
+    id: 'nextjs',
+    name: 'Next.js 15 (App Router)',
+    techStack: 'TypeScript 5, Next.js 15 (App Router), Tailwind CSS, Vitest, Zod'
+  },
+  fastapi: {
+    id: 'fastapi',
+    name: 'Python FastAPI',
+    techStack: 'Python 3.12, FastAPI, Pydantic v2, Pytest, SQLAlchemy'
+  },
+  nestjs: {
+    id: 'nestjs',
+    name: 'NestJS Backend',
+    techStack: 'TypeScript 5, NestJS 10, Jest, Prisma'
+  },
+  react: {
+    id: 'react',
+    name: 'React 19 + Vite',
+    techStack: 'TypeScript 5, Vite, React 19, Tailwind CSS, Vitest'
+  },
+  node: {
+    id: 'node',
+    name: 'Node.js (ES Modules)',
+    techStack: 'Node.js 20+ (ES Modules), Vitest'
+  }
+};
+
+export const PRESET_ALIASES = {
+  next: 'nextjs',
+  python: 'fastapi',
+  nest: 'nestjs',
+  vite: 'react',
+  minimal: 'node'
+};
+
+export function resolvePreset(presetName) {
+  if (!presetName) return null;
+  const key = String(presetName).toLowerCase().trim();
+  const canonical = PRESET_ALIASES[key] || key;
+  return PRESETS[canonical] || null;
+}
 
 export const TEMPLATES = {
   constitution: `# Core Constitution & Engineering Guidelines
@@ -736,6 +779,21 @@ export function scaffoldProject(targetDir, options = {}) {
   const force = Boolean(options.force);
   const projectName = options.projectName || path.basename(targetDir);
 
+  let constitutionContent = TEMPLATES.constitution;
+  let appliedPreset = null;
+
+  if (options.preset) {
+    appliedPreset = resolvePreset(options.preset);
+    if (!appliedPreset) {
+      const validNames = Object.keys(PRESETS).join(', ');
+      throw new Error(`Unknown preset "${options.preset}". Valid presets are: ${validNames}`);
+    }
+    constitutionContent = constitutionContent.replace(
+      '[Người dùng sẽ cập nhật công nghệ cụ thể tại đây]',
+      appliedPreset.techStack
+    );
+  }
+
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
@@ -756,7 +814,7 @@ export function scaffoldProject(targetDir, options = {}) {
   }
 
   const files = [
-    { relPath: '.specify/constitution.md', content: TEMPLATES.constitution },
+    { relPath: '.specify/constitution.md', content: constitutionContent },
     { relPath: '.specify/templates/spec-template.md', content: TEMPLATES.specTemplate },
     { relPath: '.specify/tasks/.gitkeep', content: '' },
     { relPath: '.agents/skills/sdd-planner/SKILL.md', content: TEMPLATES.plannerSkill },
@@ -813,8 +871,185 @@ export function scaffoldProject(targetDir, options = {}) {
     created,
     overwritten,
     skipped,
-    hook: hookResult
+    hook: hookResult,
+    preset: appliedPreset
   };
+}
+
+/**
+ * Extracts and parses a summary of all specifications in .specify/tasks.
+ */
+export function getTasksSummary(targetDir) {
+  const tasksDir = path.join(targetDir, '.specify', 'tasks');
+  if (!fs.existsSync(tasksDir)) {
+    return {
+      targetDir,
+      tasksDir,
+      exists: false,
+      tasks: [],
+      counts: { total: 0, completed: 0, inProgress: 0, approved: 0, draft: 0, review: 0, drifted: 0 }
+    };
+  }
+
+  const entries = fs
+    .readdirSync(tasksDir)
+    .filter((f) => (f.endsWith('-spec.md') || f.endsWith('.spec.md')) && !f.startsWith('.'));
+
+  entries.sort();
+
+  const tasks = [];
+  const counts = { total: 0, completed: 0, inProgress: 0, approved: 0, draft: 0, review: 0, drifted: 0 };
+
+  for (const filename of entries) {
+    const fullPath = path.join(tasksDir, filename);
+    let raw = '';
+    try {
+      raw = fs.readFileSync(fullPath, 'utf8');
+    } catch {
+      continue;
+    }
+
+    const meta = parseSpecMetadata(raw);
+    const status = meta['Status'] || 'Draft';
+    const version = meta['Version'] || '1.0.0';
+    const recordedHash = meta['Approved-Hash'];
+    const targetPath = meta['Target Path'];
+
+    let id = filename.replace(/(-spec|\.spec)\.md$/, '');
+    let title = filename;
+    const titleMatch = raw.match(/^#\s*(?:\[?SPEC-)?([A-Za-z0-9-]+)\]?:\s*(.+)$/m);
+    if (titleMatch) {
+      id = titleMatch[1].trim();
+      title = titleMatch[2].trim();
+    }
+
+    let hashStatus = 'UNAPPROVED';
+    if (status === 'Approved' || status === 'Completed' || status === 'In Progress') {
+      const liveHash = computeSpecHash(raw);
+      if (recordedHash && recordedHash === liveHash) {
+        hashStatus = 'VALID';
+      } else {
+        hashStatus = 'DRIFTED';
+        counts.drifted++;
+      }
+    }
+
+    const lines = raw.split('\n');
+    let acTotal = 0;
+    let acDone = 0;
+    for (const l of lines) {
+      if (/^\s*[-*]\s*\[[xX]\]\s*\*\*AC-/.test(l) || /^\s*[-*]\s*\[[xX]\]/.test(l)) {
+        acTotal++;
+        acDone++;
+      } else if (/^\s*[-*]\s*\[ \]\s*\*\*AC-/.test(l) || /^\s*[-*]\s*\[ \]/.test(l)) {
+        acTotal++;
+      }
+    }
+
+    const progressPercent = acTotal > 0 ? Math.round((acDone / acTotal) * 100) : (status === 'Completed' ? 100 : 0);
+
+    counts.total++;
+    if (status === 'Completed') counts.completed++;
+    else if (status === 'In Progress') counts.inProgress++;
+    else if (status === 'Approved') counts.approved++;
+    else if (status === 'In Review') counts.review++;
+    else counts.draft++;
+
+    tasks.push({
+      id,
+      filename,
+      title,
+      version,
+      status,
+      hashStatus,
+      acTotal,
+      acDone,
+      progressPercent,
+      targetPath
+    });
+  }
+
+  return {
+    targetDir,
+    tasksDir,
+    exists: true,
+    tasks,
+    counts
+  };
+}
+
+/**
+ * Renders an ASCII dashboard or JSON output of all tasks.
+ */
+export function renderTasksBoard(targetDir, options = {}) {
+  const summary = getTasksSummary(targetDir);
+
+  if (options.json) {
+    return JSON.stringify(summary, null, 2);
+  }
+
+  const lines = [];
+  const c = {
+    reset: '\x1b[0m',
+    bold: '\x1b[1m',
+    dim: '\x1b[2m',
+    green: '\x1b[32m',
+    cyan: '\x1b[36m',
+    yellow: '\x1b[33m',
+    magenta: '\x1b[35m',
+    red: '\x1b[31m',
+    blue: '\x1b[34m'
+  };
+
+  lines.push('');
+  lines.push(`${c.bold}${c.magenta}╔═══════════════════════════════════════════════════════════════════════════════════════╗${c.reset}`);
+  lines.push(`${c.bold}${c.magenta}║                         NEXUS KIT SPEC STATUS BOARD                                   ║${c.reset}`);
+  lines.push(`${c.bold}${c.magenta}╚═══════════════════════════════════════════════════════════════════════════════════════╝${c.reset}`);
+  lines.push('');
+
+  if (!summary.exists || summary.tasks.length === 0) {
+    lines.push(`  ${c.yellow}ℹ No specifications found in .specify/tasks/${c.reset}`);
+    lines.push(`  ${c.dim}Run sdd-planner in your AI editor to author your first task spec.${c.reset}\n`);
+    return lines.join('\n');
+  }
+
+  lines.push(
+    `  ${c.bold}${'ID'.padEnd(6)}${'VER'.padEnd(8)}${'STATUS'.padEnd(14)}${'INTEGRITY'.padEnd(12)}${'CRITERIA'.padEnd(12)}${'PROGRESS'.padEnd(20)}${'TITLE'}${c.reset}`
+  );
+  lines.push(`  ${c.dim}${'─'.repeat(85)}${c.reset}`);
+
+  for (const t of summary.tasks) {
+    let statusBadge = t.status.padEnd(14);
+    if (t.status === 'Completed') statusBadge = `${c.green}${statusBadge}${c.reset}`;
+    else if (t.status === 'Approved') statusBadge = `${c.cyan}${statusBadge}${c.reset}`;
+    else if (t.status === 'In Progress') statusBadge = `${c.blue}${statusBadge}${c.reset}`;
+    else if (t.status === 'In Review') statusBadge = `${c.yellow}${statusBadge}${c.reset}`;
+    else statusBadge = `${c.dim}${statusBadge}${c.reset}`;
+
+    let integrityBadge = '-'.padEnd(12);
+    if (t.hashStatus === 'VALID') integrityBadge = `${c.green}VALID${c.reset}       `;
+    else if (t.hashStatus === 'DRIFTED') integrityBadge = `${c.red}DRIFTED${c.reset}     `;
+
+    const filled = Math.round((t.progressPercent / 100) * 10);
+    const empty = 10 - filled;
+    const barColor = t.progressPercent === 100 ? c.green : (t.progressPercent > 0 ? c.cyan : c.dim);
+    const bar = `${barColor}[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${String(t.progressPercent).padStart(3)}%${c.reset}`;
+
+    const crit = `[${t.acDone}/${t.acTotal}]`.padEnd(12);
+    const idCol = String(t.id).padEnd(6);
+    const verCol = String(t.version).padEnd(8);
+    const titleCol = t.title.length > 32 ? t.title.slice(0, 29) + '...' : t.title;
+
+    lines.push(`  ${c.bold}${idCol}${c.reset}${verCol}${statusBadge}${integrityBadge}${crit}${bar}  ${titleCol}`);
+  }
+
+  lines.push(`  ${c.dim}${'─'.repeat(85)}${c.reset}`);
+  lines.push(
+    `  ${c.bold}Total Specs:${c.reset} ${summary.counts.total}  |  ${c.green}Completed:${c.reset} ${summary.counts.completed}  |  ${c.cyan}Approved:${c.reset} ${summary.counts.approved}  |  ${c.blue}In Progress:${c.reset} ${summary.counts.inProgress}  |  ${c.dim}Draft/Review:${c.reset} ${summary.counts.draft + summary.counts.review}${summary.counts.drifted > 0 ? `  |  ${c.red}DRIFTED: ${summary.counts.drifted}${c.reset}` : ''}`
+  );
+  lines.push('');
+
+  return lines.join('\n');
 }
 
 /**

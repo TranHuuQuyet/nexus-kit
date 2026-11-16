@@ -7,10 +7,14 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   VERSION,
+  PRESETS,
+  resolvePreset,
   parseYamlFrontmatter,
   scaffoldProject,
   validateProject,
-  installGitPreCommitHook
+  installGitPreCommitHook,
+  getTasksSummary,
+  renderTasksBoard
 } from '../lib/nexus.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -327,5 +331,152 @@ describe('Git Hard Gates & Pre-commit Hook', () => {
     assert.ok(result.hook);
     assert.equal(result.hook.success, true);
     assert.ok(fs.existsSync(path.join(tmpDir, '.git/hooks/pre-commit')));
+  });
+});
+
+describe('Tech Stack Presets & Constitution', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('resolvePreset resolves canonical names and aliases', () => {
+    assert.equal(resolvePreset('nextjs')?.id, 'nextjs');
+    assert.equal(resolvePreset('next')?.id, 'nextjs');
+    assert.equal(resolvePreset('fastapi')?.id, 'fastapi');
+    assert.equal(resolvePreset('python')?.id, 'fastapi');
+    assert.equal(resolvePreset('nestjs')?.id, 'nestjs');
+    assert.equal(resolvePreset('nest')?.id, 'nestjs');
+    assert.equal(resolvePreset('react')?.id, 'react');
+    assert.equal(resolvePreset('vite')?.id, 'react');
+    assert.equal(resolvePreset('node')?.id, 'node');
+    assert.equal(resolvePreset('minimal')?.id, 'node');
+    assert.equal(resolvePreset('unknown-stack'), null);
+  });
+
+  test('scaffoldProject applies preset to constitution.md and passes doctor with 0 warnings', () => {
+    scaffoldProject(tmpDir, { preset: 'nextjs' });
+    const content = fs.readFileSync(path.join(tmpDir, '.specify/constitution.md'), 'utf8');
+    assert.match(content, /Next\.js 15 \(App Router\)/);
+    assert.doesNotMatch(content, /Người dùng sẽ cập nhật/);
+
+    const report = validateProject(tmpDir);
+    assert.ok(report.results.some((r) => r.status === 'PASS' && r.message.includes('constitution.md is present and configured')));
+  });
+
+  test('CLI scaffolding handles valid preset and rejects unknown preset with exit 1', () => {
+    // Valid preset
+    const procValid = spawnSync(process.execPath, [CLI_PATH, tmpDir, '--preset', 'fastapi', '--force'], {
+      encoding: 'utf8'
+    });
+    assert.equal(procValid.status, 0);
+    assert.match(procValid.stdout, /\[PRESET\].*Configured.*Python FastAPI/);
+
+    // Invalid preset
+    const procInvalid = spawnSync(process.execPath, [CLI_PATH, tmpDir, '--preset', 'invalid-framework', '--force'], {
+      encoding: 'utf8'
+    });
+    assert.equal(procInvalid.status, 1);
+    assert.match(procInvalid.stderr, /Unknown preset "invalid-framework"/);
+  });
+
+  test('install.sh supports --preset flag', () => {
+    const run = spawnSync('bash', [INSTALL_SH_PATH, tmpDir, '--preset', 'nestjs', '--force'], {
+      encoding: 'utf8'
+    });
+    assert.equal(run.status, 0);
+    const constContent = fs.readFileSync(path.join(tmpDir, '.specify/constitution.md'), 'utf8');
+    assert.match(constContent, /NestJS 10/);
+  });
+});
+
+describe('Terminal Status Board & Metrics', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('handles empty tasks folder gracefully', () => {
+    scaffoldProject(tmpDir);
+    const summary = getTasksSummary(tmpDir);
+    assert.equal(summary.tasks.length, 0);
+    assert.equal(summary.counts.total, 0);
+
+    const boardText = renderTasksBoard(tmpDir);
+    assert.match(boardText, /No specifications found/);
+  });
+
+  test('parses tasks, computes AC progress, detects drift, and exports JSON', () => {
+    scaffoldProject(tmpDir);
+
+    const spec1Path = path.join(tmpDir, '.specify/tasks/001-auth-spec.md');
+    fs.writeFileSync(
+      spec1Path,
+      '# SPEC-001: JWT Authentication\n\n> **Status:** `Draft`\n> **Version:** `1.0.0`\n\n- [x] **AC-1**: Hash password\n- [ ] **AC-2**: Return JWT\n',
+      'utf8'
+    );
+
+    const spec2Path = path.join(tmpDir, '.specify/tasks/002-payment-spec.md');
+    fs.writeFileSync(
+      spec2Path,
+      '# SPEC-002: Stripe Checkout\n\n> **Status:** `Draft`\n> **Version:** `1.1.0`\n\n- [x] **AC-1**: Charge card\n- [x] **AC-2**: Webhook callback\n',
+      'utf8'
+    );
+
+    // Approve spec2
+    spawnSync(process.execPath, [CLI_PATH, '--approve', spec2Path], { encoding: 'utf8' });
+
+    const summary = getTasksSummary(tmpDir);
+    assert.equal(summary.tasks.length, 2);
+    assert.equal(summary.counts.total, 2);
+    assert.equal(summary.counts.approved, 1);
+    assert.equal(summary.counts.draft, 1);
+
+    const task1 = summary.tasks.find((t) => t.id === '001');
+    assert.equal(task1.acTotal, 2);
+    assert.equal(task1.acDone, 1);
+    assert.equal(task1.progressPercent, 50);
+    assert.equal(task1.hashStatus, 'UNAPPROVED');
+
+    const task2 = summary.tasks.find((t) => t.id === '002');
+    assert.equal(task2.acTotal, 2);
+    assert.equal(task2.acDone, 2);
+    assert.equal(task2.progressPercent, 100);
+    assert.equal(task2.hashStatus, 'VALID');
+
+    // Render board
+    const table = renderTasksBoard(tmpDir);
+    assert.match(table, /NEXUS KIT SPEC STATUS BOARD/);
+    assert.match(table, /001/);
+    assert.match(table, /50%/);
+    assert.match(table, /002/);
+    assert.match(table, /VALID/);
+
+    // Render JSON
+    const jsonOutput = renderTasksBoard(tmpDir, { json: true });
+    const parsed = JSON.parse(jsonOutput);
+    assert.equal(parsed.tasks.length, 2);
+    assert.equal(parsed.counts.total, 2);
+
+    // CLI board subcommand
+    const cliBoard = spawnSync(process.execPath, [CLI_PATH, 'board', tmpDir], { encoding: 'utf8' });
+    assert.equal(cliBoard.status, 0);
+    assert.match(cliBoard.stdout, /STATUS BOARD/);
+
+    // CLI board --json
+    const cliJson = spawnSync(process.execPath, [CLI_PATH, 'board', tmpDir, '--json'], { encoding: 'utf8' });
+    assert.equal(cliJson.status, 0);
+    const cliParsed = JSON.parse(cliJson.stdout);
+    assert.equal(cliParsed.tasks.length, 2);
   });
 });

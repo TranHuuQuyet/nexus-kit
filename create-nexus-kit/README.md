@@ -42,14 +42,18 @@ Nexus Kit bridges them with a production-grade SDD triad and Multi-IDE adapters:
 No global installation required (skips existing files by default unless `--force` is passed):
 
 ```bash
-# Scaffold in a new folder (optional: add --with-hooks to activate Git pre-commit gates immediately)
-npx create-nexus-kit@latest my-app --with-hooks
+# Scaffold in a new folder with a tech stack preset and Git pre-commit gates
+npx create-nexus-kit@latest my-app --preset nextjs --with-hooks
 
 # Scaffold safely inside an existing project (skips existing files)
 npx create-nexus-kit@latest .
 
 # Install Git pre-commit hard gate into an existing project
 npx create-nexus-kit@latest init-hooks
+
+# Render visual Terminal Status Board of all task specifications
+npx create-nexus-kit@latest board
+npx create-nexus-kit@latest board --json
 
 # Overwrite existing files intentionally
 npx create-nexus-kit@latest . --force
@@ -62,6 +66,15 @@ npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 
 # Run full Nexus Kit integrity validation (specs, hashes, skills, adapters, git hooks)
 npx create-nexus-kit@latest --doctor
+```
+
+### Supported Tech Stack Presets
+Pass `--preset <name>` to pre-configure `.specify/constitution.md` automatically:
+- `nextjs` (or `next`): `TypeScript 5, Next.js 15 (App Router), Tailwind CSS, Vitest, Zod`
+- `fastapi` (or `python`): `Python 3.12, FastAPI, Pydantic v2, Pytest, SQLAlchemy`
+- `nestjs` (or `nest`): `TypeScript 5, NestJS 10, Jest, Prisma`
+- `react` (or `vite`): `TypeScript 5, Vite, React 19, Tailwind CSS, Vitest`
+- `node` (or `minimal`): `Node.js 20+ (ES Modules), Vitest`
 ```
 
 ### Method 2: Using Shell Script

@@ -23,23 +23,56 @@ echo -e "${MAGENTA}${BOLD}  Spec-Driven Development (SDD) for AI Agents${NC}\n"
 
 FORCE="false"
 WITH_HOOKS="false"
+PRESET=""
 PROJECT_NAME=""
 
-for arg in "$@"; do
-  case "$arg" in
+while [ $# -gt 0 ]; do
+  case "$1" in
     --force|-f)
       FORCE="true"
+      shift
       ;;
     --with-hooks)
       WITH_HOOKS="true"
+      shift
+      ;;
+    --preset)
+      PRESET="$2"
+      shift 2
       ;;
     *)
       if [ -z "$PROJECT_NAME" ]; then
-        PROJECT_NAME="$arg"
+        PROJECT_NAME="$1"
       fi
+      shift
       ;;
   esac
 done
+
+TECH_STACK="[Người dùng sẽ cập nhật công nghệ cụ thể tại đây]"
+if [ -n "$PRESET" ]; then
+  case "$PRESET" in
+    nextjs|next)
+      TECH_STACK="TypeScript 5, Next.js 15 (App Router), Tailwind CSS, Vitest, Zod"
+      ;;
+    fastapi|python)
+      TECH_STACK="Python 3.12, FastAPI, Pydantic v2, Pytest, SQLAlchemy"
+      ;;
+    nestjs|nest)
+      TECH_STACK="TypeScript 5, NestJS 10, Jest, Prisma"
+      ;;
+    react|vite)
+      TECH_STACK="TypeScript 5, Vite, React 19, Tailwind CSS, Vitest"
+      ;;
+    node|minimal)
+      TECH_STACK="Node.js 20+ (ES Modules), Vitest"
+      ;;
+    *)
+      echo -e "${RED}[FAIL] Unknown preset '${PRESET}'. Valid presets are: nextjs, fastapi, nestjs, react, node${NC}"
+      exit 1
+      ;;
+  esac
+fi
 
 PROJECT_NAME="${PROJECT_NAME:-nexus-kit-app}"
 
@@ -95,13 +128,13 @@ safe_write "src/.gitkeep" < /dev/null
 
 echo -e "${YELLOW}→ Generating templates, skills, and IDE adapters...${NC}"
 
-safe_write ".specify/constitution.md" << 'EOF'
+safe_write ".specify/constitution.md" << EOF
 # Core Constitution & Engineering Guidelines
 
-1. NO VIBE CODING: Never jump straight to writing code. Always verify if a specification exists in `.specify/tasks/` first.
+1. NO VIBE CODING: Never jump straight to writing code. Always verify if a specification exists in \`.specify/tasks/\` first.
 2. DETERMINISTIC OUTPUTS: Use explicit typings, data models, and schemas. Avoid unstructured string parsing.
 3. QUALITY GATES: All code written must directly map to a predefined requirement in the task spec.
-4. TECH STACK: [Người dùng sẽ cập nhật công nghệ cụ thể tại đây]
+4. TECH STACK: ${TECH_STACK}
 EOF
 
 safe_write ".specify/templates/spec-template.md" << 'EOF'

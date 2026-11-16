@@ -4,11 +4,14 @@ import path from 'node:path';
 import process from 'node:process';
 import {
   VERSION,
+  PRESETS,
+  resolvePreset,
   approveSpec,
   verifySpecForCoding,
   scaffoldProject,
   validateProject,
-  installGitPreCommitHook
+  installGitPreCommitHook,
+  renderTasksBoard
 } from '../lib/nexus.js';
 
 const c = {
@@ -36,6 +39,7 @@ function printHelp() {
   console.log(`
 ${c.bold}Usage:${c.reset}
   npx create-nexus-kit@latest [project-name] [options]
+  npx create-nexus-kit@latest board [target-dir] [--json]
   npx create-nexus-kit@latest init-hooks [target-dir]
   npx create-nexus-kit@latest --doctor [target-dir]
   npx create-nexus-kit@latest --approve <spec-file> [--by <reviewer>]
@@ -47,8 +51,11 @@ ${c.bold}Arguments:${c.reset}
 
 ${c.bold}Options:${c.reset}
   -f, --force             Overwrite existing files if they already exist
+  --preset <name>         Scaffold with tech stack preset (nextjs, fastapi, nestjs, react, node)
   --with-hooks            Initialize Git and install pre-commit hard gate during scaffolding
   init-hooks, --init-hooks Install Git pre-commit hard gate into target directory
+  board, status           Render visual Terminal Status Board of task specifications
+  --json                  Output status board in structured JSON format
   --doctor, --check       Run full integrity & lifecycle validation on a project
   --approve <spec-file>   Approve a spec and stamp its canonical SHA-256 hash
   --by <name>             Reviewer name when using --approve
@@ -57,13 +64,20 @@ ${c.bold}Options:${c.reset}
   -v, --version           Show version number
 
 ${c.bold}Examples:${c.reset}
-  ${c.dim}$${c.reset} npx create-nexus-kit@latest my-awesome-app --with-hooks
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest my-awesome-app --preset nextjs --with-hooks
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest board
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest board --json
   ${c.dim}$${c.reset} npx create-nexus-kit@latest init-hooks
   ${c.dim}$${c.reset} npx create-nexus-kit@latest . --force
   ${c.dim}$${c.reset} npx create-nexus-kit@latest --approve .specify/tasks/001-auth-spec.md
   ${c.dim}$${c.reset} npx create-nexus-kit@latest --verify-spec .specify/tasks/001-auth-spec.md
   ${c.dim}$${c.reset} npx create-nexus-kit@latest --doctor
 `);
+}
+
+function runBoard(targetDir, isJson) {
+  const output = renderTasksBoard(targetDir, { json: isJson });
+  console.log(output);
 }
 
 function runInitHooks(targetDir, force) {
@@ -184,6 +198,15 @@ function run() {
     return;
   }
 
+  const boardIndex = args.findIndex((a) => a === 'board' || a === 'status');
+  if (boardIndex !== -1) {
+    const nextArg = args[boardIndex + 1];
+    const target = nextArg && !nextArg.startsWith('-') ? path.resolve(process.cwd(), nextArg) : process.cwd();
+    const isJson = args.includes('--json');
+    runBoard(target, isJson);
+    return;
+  }
+
   const hookIndex = args.findIndex((a) => a === 'init-hooks' || a === '--init-hooks');
   if (hookIndex !== -1) {
     const nextArg = args[hookIndex + 1];
@@ -195,22 +218,34 @@ function run() {
 
   const force = args.includes('-f') || args.includes('--force');
   const withHooks = args.includes('--with-hooks');
-  const positionalArgs = args.filter((a) => !a.startsWith('-') && a !== 'init-hooks');
+
+  const presetIdx = args.indexOf('--preset');
+  let presetName = presetIdx !== -1 ? args[presetIdx + 1] : undefined;
+  if (presetName && !resolvePreset(presetName)) {
+    console.error(`\n  ${c.red}[FAIL]${c.reset} Unknown preset "${presetName}".`);
+    console.error(`  Valid presets are: ${c.cyan}${Object.keys(PRESETS).join(', ')}${c.reset}\n`);
+    process.exit(1);
+  }
+
+  const positionalArgs = args.filter((a) => !a.startsWith('-') && a !== 'init-hooks' && a !== 'board' && a !== 'status' && (presetIdx === -1 || a !== presetName));
   const rawName = positionalArgs[0] || 'nexus-kit-app';
   const isCurrentDir = rawName === '.';
   const projectDir = isCurrentDir ? process.cwd() : path.resolve(process.cwd(), rawName);
   const projectName = isCurrentDir ? path.basename(projectDir) : rawName;
 
   console.log(BANNER);
-  console.log(`${c.blue}ℹ${c.reset} Initializing ${c.bold}${projectName}${c.reset} at ${c.dim}${projectDir}${c.reset}${force ? ` ${c.yellow}(--force)${c.reset}` : ''}${withHooks ? ` ${c.cyan}(--with-hooks)${c.reset}` : ''}\n`);
+  console.log(`${c.blue}ℹ${c.reset} Initializing ${c.bold}${projectName}${c.reset} at ${c.dim}${projectDir}${c.reset}${force ? ` ${c.yellow}(--force)${c.reset}` : ''}${withHooks ? ` ${c.cyan}(--with-hooks)${c.reset}` : ''}${presetName ? ` ${c.green}(--preset ${presetName})${c.reset}` : ''}\n`);
 
-  const result = scaffoldProject(projectDir, { force, projectName, withHooks });
+  const result = scaffoldProject(projectDir, { force, projectName, withHooks, preset: presetName });
 
   for (const relPath of result.created) {
     console.log(`  ${c.green}[CREATED]${c.reset}     ${relPath}`);
   }
   if (result.hook && result.hook.success) {
     console.log(`  ${c.green}[CREATED]${c.reset}     .git/hooks/pre-commit (Git Hard Gate active)`);
+  }
+  if (result.preset) {
+    console.log(`  ${c.cyan}[PRESET]${c.reset}      Configured ${c.bold}${result.preset.name}${c.reset}`);
   }
   for (const relPath of result.overwritten) {
     console.log(`  ${c.yellow}[OVERWRITTEN]${c.reset} ${relPath}`);
@@ -234,7 +269,8 @@ function run() {
   }
   console.log(`  3. Update technology guidelines in ${c.cyan}.specify/constitution.md${c.reset}`);
   console.log(`  4. Approve specs with ${c.cyan}npx create-nexus-kit --approve <spec-file>${c.reset}`);
-  console.log(`  5. Run ${c.cyan}npx create-nexus-kit --doctor${c.reset} anytime for full integrity checks\n`);
+  console.log(`  5. Check project status board with ${c.cyan}npx create-nexus-kit board${c.reset}`);
+  console.log(`  6. Run ${c.cyan}npx create-nexus-kit --doctor${c.reset} anytime for full integrity checks\n`);
 }
 
 run();
