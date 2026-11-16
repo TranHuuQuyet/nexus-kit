@@ -15,7 +15,7 @@
 
 ## Overview
 
-`create-nexus-kit` is the official zero-dependency CLI to scaffold production-grade **Nexus Kit** projects. It establishes an integrated environment connecting **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate unstructured AI code generation ("vibe coding") across Claude Code, Cursor, GitHub Copilot, and Antigravity.
+`create-nexus-kit` is the official zero-dependency CLI to scaffold production-grade **Nexus Kit** projects. It establishes an integrated environment connecting **Spec Kit** (specification governance) and **Agent Skills** (agent execution standards) to eliminate unstructured AI code generation ("vibe coding") across Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, and Antigravity.
 
 ---
 
@@ -30,7 +30,8 @@ Nexus Kit bridges them with a production-grade SDD triad and Multi-IDE adapters:
 - **`sdd-planner`**: Conducts clarifying interviews, enforces scope lock, and authors formal specifications into `.specify/tasks/`.
 - **`sdd-coder`**: Implements approved specifications in `src/` with strict typing, zero scope creep, and automated tests.
 - **`sdd-verifier`**: Performs zero-trust audits building a traceability matrix against all Acceptance Criteria.
-- **IDE Adapters**: Generates verified rule files for Antigravity (`AGENTS.md` without frontmatter), Claude Code (`CLAUDE.md`), Cursor (`.cursor/rules/nexus-kit.mdc` with `alwaysApply: true`), and GitHub Copilot (`.github/copilot-instructions.md`).
+- **IDE Adapters**: Generates verified rule files for Antigravity (`AGENTS.md` without frontmatter), Claude Code (`CLAUDE.md`), Cursor (`.cursor/rules/nexus-kit.mdc` with `alwaysApply: true`), Windsurf Cascade (`.windsurfrules`), Cline / Roo Code (`.clinerules`), and GitHub Copilot (`.github/copilot-instructions.md`).
+- **Git Hard Gates**: Enforces physical pre-commit checks (`init-hooks`) to prevent committing modifications in `src/` without an approved specification.
 
 ---
 
@@ -41,11 +42,14 @@ Nexus Kit bridges them with a production-grade SDD triad and Multi-IDE adapters:
 No global installation required (skips existing files by default unless `--force` is passed):
 
 ```bash
-# Scaffold in a new folder
-npx create-nexus-kit@latest my-app
+# Scaffold in a new folder (optional: add --with-hooks to activate Git pre-commit gates immediately)
+npx create-nexus-kit@latest my-app --with-hooks
 
 # Scaffold safely inside an existing project (skips existing files)
 npx create-nexus-kit@latest .
+
+# Install Git pre-commit hard gate into an existing project
+npx create-nexus-kit@latest init-hooks
 
 # Overwrite existing files intentionally
 npx create-nexus-kit@latest . --force
@@ -56,7 +60,7 @@ npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 # Verify a spec is approved and not stale before coding
 npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 
-# Run full Nexus Kit integrity validation (specs, hashes, skills, adapters)
+# Run full Nexus Kit integrity validation (specs, hashes, skills, adapters, git hooks)
 npx create-nexus-kit@latest --doctor
 ```
 
@@ -66,15 +70,16 @@ npx create-nexus-kit@latest --doctor
 # Default project name (nexus-kit-app)
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
 
-# Custom project name
-curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash -s -- my-app
+# Custom project name with hooks
+curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash -s -- my-app --with-hooks
 ```
 
 ### Method 3: Global npm Installation (Enables `nexus-kit` Alias)
 
 ```bash
 npm install -g create-nexus-kit
-nexus-kit my-app
+nexus-kit my-app --with-hooks
+nexus-kit init-hooks
 nexus-kit --approve .specify/tasks/001-feature-spec.md
 nexus-kit --doctor
 ```
@@ -96,6 +101,8 @@ my-app/
 │   └── sdd-verifier/SKILL.md         # Specification compliance audit
 ├── .cursor/rules/nexus-kit.mdc       # Cursor IDE rules (alwaysApply: true)
 ├── .github/copilot-instructions.md   # GitHub Copilot instructions
+├── .windsurfrules                    # Windsurf Cascade IDE rules
+├── .clinerules                       # Cline / Roo Code instructions
 ├── AGENTS.md                         # Antigravity / Open Standard directory rule
 ├── CLAUDE.md                         # Claude Code instructions
 ├── src/                              # Application source code

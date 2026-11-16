@@ -22,12 +22,16 @@ EOF
 echo -e "${MAGENTA}${BOLD}  Spec-Driven Development (SDD) for AI Agents${NC}\n"
 
 FORCE="false"
+WITH_HOOKS="false"
 PROJECT_NAME=""
 
 for arg in "$@"; do
   case "$arg" in
     --force|-f)
       FORCE="true"
+      ;;
+    --with-hooks)
+      WITH_HOOKS="true"
       ;;
     *)
       if [ -z "$PROJECT_NAME" ]; then
@@ -345,6 +349,136 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
   - For verification: follow `.agents/skills/sdd-verifier/SKILL.md` to audit against Acceptance Criteria.
 EOF
 
+safe_write ".windsurfrules" << 'EOF'
+# Windsurf Cascade Rules — Nexus Kit SDD Protocol
+
+This project is governed by **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Directives
+1. **NO VIBE CODING**: Never write or modify application code in `src/` without an approved specification in `.specify/tasks/`.
+2. **Read Constitution First**: Always consult `.specify/constitution.md` before planning or coding to verify tech stack constraints and quality gates.
+3. **Execute the SDD Triad** (located in `.agents/skills/`):
+   - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`. Draft specifications into `.specify/tasks/` and wait for human approval before coding.
+   - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within `In-Scope` bounds of approved specs.
+   - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit implementation against all Acceptance Criteria.
+EOF
+
+safe_write ".clinerules" << 'EOF'
+# Cline Rules — Nexus Kit SDD Protocol
+
+This repository adheres to **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Rules
+1. **NO VIBE CODING**: Never write or modify application code in `src/` without an approved specification in `.specify/tasks/`.
+2. **Read Constitution First**: Check `.specify/constitution.md` before writing any code to ensure compliance with the tech stack and typing rules.
+3. **SDD Workflow** (located in `.agents/skills/`):
+   - **sdd-planner**: When asked to create or modify a feature, use `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`. Save to `.specify/tasks/` and require human approval (`--approve`).
+   - **sdd-coder**: Follow `.agents/skills/sdd-coder/SKILL.md` only after verifying approval with `nexus-kit --verify-spec <spec-path>`.
+   - **sdd-verifier**: Follow `.agents/skills/sdd-verifier/SKILL.md` to audit Acceptance Criteria before completing the task.
+EOF
+
+if [ "$WITH_HOOKS" = "true" ]; then
+  if [ ! -d "$PROJECT_DIR/.git" ]; then
+    if command -v git >/dev/null 2>&1; then
+      git -C "$PROJECT_DIR" init >/dev/null 2>&1 || true
+    fi
+  fi
+  if [ -d "$PROJECT_DIR/.git" ]; then
+    mkdir -p "$PROJECT_DIR/.git/hooks"
+    safe_write ".git/hooks/pre-commit" << 'EOF'
+#!/bin/sh
+# Nexus Kit Git Hard Gate — Pre-commit Hook
+# Prevents unapproved vibe coding in src/
+
+STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^src/' || true)
+if [ -z "$STAGED_SRC" ]; then
+  exit 0
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  printf "\033[1;31m[NEXUS-KIT HARD GATE ERROR]\033[0m node is required to verify specification integrity.\n"
+  exit 1
+fi
+
+node -e '
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const tasksDir = path.join(process.cwd(), ".specify", "tasks");
+if (!fs.existsSync(tasksDir)) {
+  console.error("\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\x1b[0m");
+  console.error("  Commit blocked: Staged changes in src/ without a .specify/tasks/ directory!");
+  console.error("  Rule: NO VIBE CODING - Always plan and approve a specification first.\n");
+  process.exit(1);
+}
+
+const specFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith("-spec.md") || f.endsWith(".spec.md"));
+if (specFiles.length === 0) {
+  console.error("\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\x1b[0m");
+  console.error("  Commit blocked: Staged changes in src/ with zero specifications in .specify/tasks/!");
+  console.error("  Rule: NO VIBE CODING - Run sdd-planner and approve a spec first.\n");
+  process.exit(1);
+}
+
+function parseMeta(content) {
+  const meta = {};
+  for (const line of content.split("\n")) {
+    const match = line.match(/^>\s*\*\*([^:]+):\*\*\s*`?([^`\r\n]+)`?/);
+    if (match) {
+      meta[match[1].trim()] = match[2].trim();
+    }
+  }
+  return meta;
+}
+
+function computeHash(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const filtered = lines.filter(line => {
+    return !/^>\s*\*\*(Status|Approved-By|Approved-At|Approved-Hash):\*\*/i.test(line);
+  });
+  const normalized = filtered.map(line => {
+    if (/^(\s*[-*]\s*\[)[xX](\]\s*)/.test(line)) {
+      return line.replace(/^(\s*[-*]\s*\[)[xX](\]\s*)/, "$1 $2");
+    }
+    return line;
+  });
+  const canonical = normalized.join("\n").trim();
+  const digest = crypto.createHash("sha256").update(canonical, "utf8").digest("hex");
+  return `sha256:${digest}`;
+}
+
+let validApprovedSpecs = 0;
+for (const file of specFiles) {
+  const full = path.join(tasksDir, file);
+  const raw = fs.readFileSync(full, "utf8");
+  const meta = parseMeta(raw);
+  const status = meta["Status"];
+
+  if (status === "Approved" || status === "Completed" || status === "In Progress") {
+    const stampedHash = meta["Approved-Hash"];
+    const liveHash = computeHash(raw);
+    if (stampedHash && stampedHash === liveHash) {
+      validApprovedSpecs++;
+    }
+  }
+}
+
+if (validApprovedSpecs === 0) {
+  console.error("\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\x1b[0m");
+  console.error("  Commit blocked: Changes staged in src/, but NO Approved or Completed spec found in .specify/tasks/!");
+  console.error("  Hint: Use \"nexus-kit --approve .specify/tasks/<spec-file>.md\" after review.\n");
+  process.exit(1);
+}
+
+console.log(`\x1b[32m✔ [NEXUS-KIT HARD GATE]\x1b[0m Verified ${validApprovedSpecs} approved spec(s). Commit allowed.`);
+process.exit(0);
+'
+EOF
+    chmod +x "$PROJECT_DIR/.git/hooks/pre-commit" 2>/dev/null || true
+  fi
+fi
+
 {
   printf '# %s\n' "$PROJECT_DISPLAY_NAME"
   cat << 'EOF'
@@ -418,6 +552,6 @@ echo -e "${BOLD}Next steps:${NC}"
 if [ "$PROJECT_NAME" != "." ]; then
   echo -e "  1. ${CYAN}cd ${PROJECT_NAME}${NC}"
 fi
-echo -e "  2. Open the project in your AI editor (Antigravity, Claude Code, Cursor, GitHub Copilot)"
+echo -e "  2. Open the project in your AI editor (Antigravity, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot)"
 echo -e "  3. Update technology guidelines in ${CYAN}.specify/constitution.md${NC}"
 echo -e "  4. Plan via ${YELLOW}sdd-planner${NC}, build via ${YELLOW}sdd-coder${NC}, and audit via ${YELLOW}sdd-verifier${NC}\n"

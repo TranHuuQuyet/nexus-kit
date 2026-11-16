@@ -63,7 +63,10 @@ flowchart LR
   - **Antigravity / Chuẩn mở**: Tự động nạp vô điều kiện tệp `AGENTS.md` (directory-based rule, không chứa frontmatter) và tự động quét kỹ năng tại `.agents/skills/*/SKILL.md`.
   - **Claude Code**: Tự động nạp tệp `CLAUDE.md` ở thư mục gốc.
   - **Cursor**: Tự động áp dụng `.cursor/rules/nexus-kit.mdc` qua cờ `alwaysApply: true`.
+  - **Windsurf Cascade**: Tự động áp dụng quy tắc `.windsurfrules`.
+  - **Cline / Roo Code**: Tự động áp dụng chỉ dẫn `.clinerules`.
   - **GitHub Copilot**: Tự động nạp `.github/copilot-instructions.md`.
+- **Rào chắn cứng Git (Git Hard Gates)**: Ngăn chặn triệt để "vibe coding" ở cấp độ Git thông qua hook kiểm tra tự động trước commit (`nexus-kit init-hooks`).
 - **`src/`**: Mã nguồn sản phẩm, được sinh ra có kiểm soát và truy vết trực tiếp tới spec đã duyệt.
 
 ---
@@ -75,6 +78,8 @@ flowchart LR
 | **Antigravity** | `AGENTS.md` (quy tắc vô điều kiện tại gốc) | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
 | **Claude Code** | `CLAUDE.md` (tại thư mục gốc) | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
 | **Cursor** | `.cursor/rules/nexus-kit.mdc` (`alwaysApply: true`) | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
+| **Windsurf Cascade** | `.windsurfrules` | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
+| **Cline / Roo Code** | `.clinerules` | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
 | **GitHub Copilot** | `.github/copilot-instructions.md` | `.agents/skills/*/SKILL.md` | Đã kiểm chứng |
 
 ---
@@ -84,18 +89,22 @@ flowchart LR
 Khởi tạo một dự án mới an toàn (mặc định tự động **bỏ qua các tệp đã tồn tại** để bảo vệ dữ liệu hiện có):
 
 ```bash
-# Cách 1: Sử dụng npx (Khuyên dùng)
-npx create-nexus-kit@latest my-project
+# Cách 1: Sử dụng npx (Khuyên dùng - thêm --with-hooks để kích hoạt ngay rào chắn Git)
+npx create-nexus-kit@latest my-project --with-hooks
 
 # Tích hợp an toàn vào dự án đang có sẵn (không ghi đè file cũ)
 npx create-nexus-kit@latest .
+
+# Cài đặt rào chắn Git pre-commit vào dự án hiện có
+npx create-nexus-kit@latest init-hooks
 
 # Chủ động ghi đè lại các tệp nếu muốn thiết lập lại từ đầu
 npx create-nexus-kit@latest . --force
 
 # Cách 2: Cài đặt Global (dùng lệnh rút gọn 'nexus-kit')
 npm install -g create-nexus-kit
-nexus-kit my-project
+nexus-kit my-project --with-hooks
+nexus-kit init-hooks
 
 # Cách 3: Sử dụng Shell Script (không cần cài trước Node.js)
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
@@ -110,7 +119,7 @@ npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 # Kiểm tra Spec đã được duyệt và còn nguyên vẹn trước khi Coder triển khai
 npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 
-# Chạy kiểm định toàn vẹn hệ thống (specs, hashes, skills, adapters, template parity)
+# Chạy kiểm định toàn vẹn hệ thống (specs, hashes, skills, adapters, git hooks)
 npx create-nexus-kit@latest --doctor
 ```
 *(Sau khi cài `npm i -g create-nexus-kit`, bạn có thể gõ ngắn gọn `nexus-kit` thay cho `npx create-nexus-kit@latest`.)*
@@ -132,6 +141,8 @@ nexus-kit/
 │   └── sdd-verifier/SKILL.md         # Kiểm toán đối chiếu tiêu chí spec
 ├── .cursor/rules/nexus-kit.mdc       # Quy tắc tự động cho Cursor IDE
 ├── .github/copilot-instructions.md   # Quy tắc tự động cho GitHub Copilot
+├── .windsurfrules                    # Quy tắc tự động cho Windsurf Cascade
+├── .clinerules                       # Quy tắc tự động cho Cline / Roo Code
 ├── AGENTS.md                         # Quy tắc tự động cho Antigravity / Chuẩn mở
 ├── CLAUDE.md                         # Quy tắc tự động cho Claude Code
 ├── src/                              # Mã nguồn ứng dụng

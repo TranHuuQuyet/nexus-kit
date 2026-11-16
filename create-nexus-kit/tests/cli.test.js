@@ -9,7 +9,8 @@ import {
   VERSION,
   parseYamlFrontmatter,
   scaffoldProject,
-  validateProject
+  validateProject,
+  installGitPreCommitHook
 } from '../lib/nexus.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -65,8 +66,12 @@ describe('scaffoldProject & Non-Overwrite Safety (P0)', () => {
     assert.ok(result.created.includes('CLAUDE.md'));
     assert.ok(result.created.includes('.cursor/rules/nexus-kit.mdc'));
     assert.ok(result.created.includes('.github/copilot-instructions.md'));
+    assert.ok(result.created.includes('.windsurfrules'));
+    assert.ok(result.created.includes('.clinerules'));
     assert.ok(fs.existsSync(path.join(tmpDir, '.specify/templates/spec-template.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, '.agents/skills/sdd-verifier/SKILL.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '.windsurfrules')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '.clinerules')));
     const generatedReadme = fs.readFileSync(path.join(tmpDir, 'README.md'), 'utf8');
     assert.match(generatedReadme, /Getting Started/);
     assert.match(generatedReadme, /--approve/);
@@ -149,7 +154,7 @@ describe('validateProject & CLI --doctor (P1)', () => {
 
     const proc = spawnSync(process.execPath, [CLI_PATH, '--doctor', tmpDir], { encoding: 'utf8' });
     assert.equal(proc.status, 0);
-    assert.match(stripAnsi(proc.stdout), /10 passed, 0 warnings, 0 failed/);
+    assert.match(stripAnsi(proc.stdout), /12 passed, 0 warnings, 0 failed/);
   });
 
   test('fails when constitution.md lacks mandatory laws or skill chain is broken', () => {
@@ -245,12 +250,16 @@ describe('install.sh parity & CLI flags', () => {
     assert.notEqual(bashReadme, '# Existing User Docs');
     assert.match(bashReadme, /Getting Started/);
     assert.match(bashReadme, /npx create-nexus-kit@latest --approve/);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.windsurfrules')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '.clinerules')));
   });
 
   test('--help, --version, and package.json bin aliases are properly configured', () => {
     const helpOut = execFileSync(process.execPath, [CLI_PATH, '--help'], { encoding: 'utf8' });
     assert.match(helpOut, /--force/);
     assert.match(helpOut, /--doctor/);
+    assert.match(helpOut, /init-hooks/);
+    assert.match(helpOut, /--with-hooks/);
     assert.match(helpOut, /nexus-kit/);
 
     const verOut = execFileSync(process.execPath, [CLI_PATH, '--version'], { encoding: 'utf8' });
@@ -260,5 +269,63 @@ describe('install.sh parity & CLI flags', () => {
     assert.equal(pkg.version, VERSION);
     assert.equal(pkg.bin['create-nexus-kit'], 'bin/index.js');
     assert.equal(pkg.bin['nexus-kit'], 'bin/index.js');
+  });
+});
+
+describe('Git Hard Gates & Pre-commit Hook', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('installGitPreCommitHook fails gracefully on non-git directory', () => {
+    const res = installGitPreCommitHook(tmpDir);
+    assert.equal(res.success, false);
+    assert.match(res.reason, /not a Git repository/i);
+  });
+
+  test('installGitPreCommitHook creates executable hook in git repository', () => {
+    fs.mkdirSync(path.join(tmpDir, '.git'));
+    const res = installGitPreCommitHook(tmpDir);
+    assert.equal(res.success, true);
+    assert.ok(fs.existsSync(res.hookPath));
+
+    const content = fs.readFileSync(res.hookPath, 'utf8');
+    assert.match(content, /NEXUS-KIT HARD GATE/);
+    assert.match(content, /NO VIBE CODING/);
+
+    // Second call without force skips
+    const res2 = installGitPreCommitHook(tmpDir);
+    assert.equal(res2.success, false);
+    assert.match(res2.reason, /already exists/i);
+
+    // Second call with force overwrites
+    const res3 = installGitPreCommitHook(tmpDir, { force: true });
+    assert.equal(res3.success, true);
+    assert.equal(res3.overwritten, true);
+  });
+
+  test('CLI init-hooks installs pre-commit hook into git repo', () => {
+    fs.mkdirSync(path.join(tmpDir, '.git'));
+    const proc = spawnSync(process.execPath, [CLI_PATH, 'init-hooks', '.'], {
+      cwd: tmpDir,
+      encoding: 'utf8'
+    });
+    assert.equal(proc.status, 0);
+    assert.match(proc.stdout, /Git hard gate is active/);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.git/hooks/pre-commit')));
+  });
+
+  test('scaffoldProject with --with-hooks initializes git hook if git is available', () => {
+    fs.mkdirSync(path.join(tmpDir, '.git'));
+    const result = scaffoldProject(tmpDir, { withHooks: true });
+    assert.ok(result.hook);
+    assert.equal(result.hook.success, true);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.git/hooks/pre-commit')));
   });
 });

@@ -41,6 +41,8 @@ jobs:
           test -f test-app/CLAUDE.md
           test -f test-app/.cursor/rules/nexus-kit.mdc
           test -f test-app/.github/copilot-instructions.md
+          test -f test-app/.windsurfrules
+          test -f test-app/.clinerules
           node create-nexus-kit/bin/index.js --doctor test-app
           rm -rf test-app
 
@@ -48,6 +50,8 @@ jobs:
         run: |
           bash create-nexus-kit/install.sh test-bash-app
           test -f test-bash-app/AGENTS.md
+          test -f test-bash-app/.windsurfrules
+          test -f test-bash-app/.clinerules
           node create-nexus-kit/bin/index.js --doctor test-bash-app
           rm -rf test-bash-app
 

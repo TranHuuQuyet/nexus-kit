@@ -218,4 +218,49 @@ test('AC-2: throws TypeError on non-string inputs', () => {
     assert.equal(doctorFinal.status, 0);
     assert.match(doctorFinal.stdout.replace(/\x1b\[[0-9;]*m/g, ''), /0 warnings, 0 failed/);
   });
+
+  test('Git Pre-commit Hook blocks un-spec’d changes in src/ and permits approved changes', () => {
+    // 1. Initialize git repo and set git user config
+    spawnSync('git', ['init'], { cwd: projectDir });
+    spawnSync('git', ['config', 'user.email', 'test@nexuskit.dev'], { cwd: projectDir });
+    spawnSync('git', ['config', 'user.name', 'Nexus Tester'], { cwd: projectDir });
+
+    // 2. Scaffold with CLI and install hooks
+    const initProc = spawnSync(process.execPath, [CLI_PATH, '.', '--with-hooks'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(initProc.status, 0);
+
+    const hookFile = path.join(projectDir, '.git/hooks/pre-commit');
+    assert.ok(fs.existsSync(hookFile));
+
+    // 3. Stage changes outside src/ (e.g. README) -> Pre-commit hook allows immediately
+    fs.writeFileSync(path.join(projectDir, 'README.md'), '# Updated Docs', 'utf8');
+    spawnSync('git', ['add', 'README.md'], { cwd: projectDir });
+    const commitDocs = spawnSync('git', ['commit', '-m', 'docs: update readme'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(commitDocs.status, 0);
+
+    // 4. Stage vibe-coded file in src/ without spec -> Pre-commit hook MUST BLOCK
+    fs.writeFileSync(path.join(projectDir, 'src/unauthorized.js'), 'export const bad = true;', 'utf8');
+    spawnSync('git', ['add', 'src/unauthorized.js'], { cwd: projectDir });
+
+    const commitVibe = spawnSync('git', ['commit', '-m', 'feat: unauthorized vibe code'], { cwd: projectDir, encoding: 'utf8' });
+    assert.notEqual(commitVibe.status, 0, 'Commit should have been blocked by pre-commit hook');
+    assert.match(commitVibe.stderr + commitVibe.stdout, /NEXUS-KIT HARD GATE VIOLATION/);
+
+    // 5. Add a Draft spec -> Commit MUST STILL BE BLOCKED
+    const draftSpec = `# SPEC-001: Authorized Feature\n\n> **Status:** \`Draft\`\n> **Version:** \`1.0.0\`\n> **Target Path:** \`src/unauthorized.js\`\n\n## 1. Overview\nValid feature.`;
+    fs.writeFileSync(path.join(projectDir, '.specify/tasks/001-feature-spec.md'), draftSpec, 'utf8');
+
+    const commitDraft = spawnSync('git', ['commit', '-m', 'feat: still draft'], { cwd: projectDir, encoding: 'utf8' });
+    assert.notEqual(commitDraft.status, 0, 'Commit should be blocked when spec is Draft');
+    assert.match(commitDraft.stderr + commitDraft.stdout, /NEXUS-KIT HARD GATE VIOLATION/);
+
+    // 6. Approve the spec -> Pre-commit hook MUST SUCCEED
+    const approveProc = spawnSync(process.execPath, [CLI_PATH, '--approve', '.specify/tasks/001-feature-spec.md'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(approveProc.status, 0);
+
+    spawnSync('git', ['add', '.specify/tasks/001-feature-spec.md'], { cwd: projectDir });
+    const commitApproved = spawnSync('git', ['commit', '-m', 'feat: properly specified feature'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(commitApproved.status, 0, `Commit failed: ${commitApproved.stderr}\n${commitApproved.stdout}`);
+    assert.match(commitApproved.stdout + commitApproved.stderr, /Verified 1 approved spec/);
+  });
 });

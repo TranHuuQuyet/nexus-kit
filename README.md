@@ -63,7 +63,10 @@ flowchart LR
   - **Antigravity / Open Standard**: Unconditionally loads `AGENTS.md` (directory-based rule without frontmatter) and progressively discovers `.agents/skills/*/SKILL.md`.
   - **Claude Code**: Automatically loads `CLAUDE.md` at repository root.
   - **Cursor**: Automatically enforces `.cursor/rules/nexus-kit.mdc` via `alwaysApply: true`.
+  - **Windsurf Cascade**: Automatically enforces `.windsurfrules`.
+  - **Cline / Roo Code**: Automatically enforces `.clinerules`.
   - **GitHub Copilot**: Automatically loads `.github/copilot-instructions.md`.
+- **Git Hard Gates**: Physically prevents un-spec'd vibe coding via executable pre-commit hooks (`nexus-kit init-hooks`).
 - **`src/`**: Application source code generated strictly from approved specifications.
 
 ---
@@ -75,6 +78,8 @@ flowchart LR
 | **Antigravity** | `AGENTS.md` (unconditional directory rule) | `.agents/skills/*/SKILL.md` | Verified |
 | **Claude Code** | `CLAUDE.md` (workspace root) | `.agents/skills/*/SKILL.md` | Verified |
 | **Cursor** | `.cursor/rules/nexus-kit.mdc` (`alwaysApply: true`) | `.agents/skills/*/SKILL.md` | Verified |
+| **Windsurf Cascade** | `.windsurfrules` | `.agents/skills/*/SKILL.md` | Verified |
+| **Cline / Roo Code** | `.clinerules` | `.agents/skills/*/SKILL.md` | Verified |
 | **GitHub Copilot** | `.github/copilot-instructions.md` | `.agents/skills/*/SKILL.md` | Verified |
 
 ---
@@ -85,17 +90,21 @@ Initialize a new project safely using the zero-dependency CLI (existing files ar
 
 ```bash
 # Method 1: Using npx (Recommended)
-npx create-nexus-kit@latest my-project
+npx create-nexus-kit@latest my-project --with-hooks
 
 # Scaffold safely into an existing project (skips existing files)
 npx create-nexus-kit@latest .
+
+# Install Git pre-commit hard gate into an existing project
+npx create-nexus-kit@latest init-hooks
 
 # Overwrite existing files intentionally
 npx create-nexus-kit@latest . --force
 
 # Method 2: Global install (enables short 'nexus-kit' command)
 npm install -g create-nexus-kit
-nexus-kit my-project
+nexus-kit my-project --with-hooks
+nexus-kit init-hooks
 
 # Method 3: Shell Script (no Node.js prerequisite)
 curl -sL https://raw.githubusercontent.com/TranHuuQuyet/nexus-kit/main/create-nexus-kit/install.sh | bash
@@ -110,7 +119,7 @@ npx create-nexus-kit@latest --approve .specify/tasks/001-feature-spec.md
 # Verify a spec is approved and not stale before coding
 npx create-nexus-kit@latest --verify-spec .specify/tasks/001-feature-spec.md
 
-# Run full Nexus Kit integrity validation (specs, hashes, skills, adapters)
+# Run full Nexus Kit integrity validation (specs, hashes, skills, adapters, git hooks)
 npx create-nexus-kit@latest --doctor
 ```
 *(After `npm i -g create-nexus-kit`, replace `npx create-nexus-kit@latest` with `nexus-kit`.)*
@@ -132,6 +141,8 @@ nexus-kit/
 │   └── sdd-verifier/SKILL.md         # Specification compliance audit
 ├── .cursor/rules/nexus-kit.mdc       # Cursor IDE automatic rule enforcement
 ├── .github/copilot-instructions.md   # GitHub Copilot instructions
+├── .windsurfrules                    # Windsurf Cascade IDE rules
+├── .clinerules                       # Cline / Roo Code instructions
 ├── AGENTS.md                         # Antigravity / Open Standard directory rule
 ├── CLAUDE.md                         # Claude Code automatic instructions
 ├── src/                              # Application source code

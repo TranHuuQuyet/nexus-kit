@@ -7,7 +7,8 @@ import {
   approveSpec,
   verifySpecForCoding,
   scaffoldProject,
-  validateProject
+  validateProject,
+  installGitPreCommitHook
 } from '../lib/nexus.js';
 
 const c = {
@@ -35,6 +36,7 @@ function printHelp() {
   console.log(`
 ${c.bold}Usage:${c.reset}
   npx create-nexus-kit@latest [project-name] [options]
+  npx create-nexus-kit@latest init-hooks [target-dir]
   npx create-nexus-kit@latest --doctor [target-dir]
   npx create-nexus-kit@latest --approve <spec-file> [--by <reviewer>]
   npx create-nexus-kit@latest --verify-spec <spec-file>
@@ -45,6 +47,8 @@ ${c.bold}Arguments:${c.reset}
 
 ${c.bold}Options:${c.reset}
   -f, --force             Overwrite existing files if they already exist
+  --with-hooks            Initialize Git and install pre-commit hard gate during scaffolding
+  init-hooks, --init-hooks Install Git pre-commit hard gate into target directory
   --doctor, --check       Run full integrity & lifecycle validation on a project
   --approve <spec-file>   Approve a spec and stamp its canonical SHA-256 hash
   --by <name>             Reviewer name when using --approve
@@ -53,12 +57,27 @@ ${c.bold}Options:${c.reset}
   -v, --version           Show version number
 
 ${c.bold}Examples:${c.reset}
-  ${c.dim}$${c.reset} npx create-nexus-kit@latest my-awesome-app
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest my-awesome-app --with-hooks
+  ${c.dim}$${c.reset} npx create-nexus-kit@latest init-hooks
   ${c.dim}$${c.reset} npx create-nexus-kit@latest . --force
   ${c.dim}$${c.reset} npx create-nexus-kit@latest --approve .specify/tasks/001-auth-spec.md
   ${c.dim}$${c.reset} npx create-nexus-kit@latest --verify-spec .specify/tasks/001-auth-spec.md
   ${c.dim}$${c.reset} npx create-nexus-kit@latest --doctor
 `);
+}
+
+function runInitHooks(targetDir, force) {
+  console.log(BANNER);
+  console.log(`${c.blue}ℹ${c.reset} Installing Nexus Kit Git Pre-commit Hard Gate at ${c.dim}${targetDir}${c.reset}\n`);
+
+  const res = installGitPreCommitHook(targetDir, { force });
+  if (!res.success) {
+    console.error(`  ${c.red}[FAIL]${c.reset} ${res.reason}\n`);
+    process.exit(1);
+  }
+
+  console.log(`  ${c.green}[PASS]${c.reset} ${res.message}: ${c.dim}${res.hookPath}${c.reset}\n`);
+  console.log(`${c.green}${c.bold}✔ Git hard gate is active! Commits touching src/ require an Approved spec.${c.reset}\n`);
 }
 
 function runDoctor(targetDir) {
@@ -165,20 +184,33 @@ function run() {
     return;
   }
 
+  const hookIndex = args.findIndex((a) => a === 'init-hooks' || a === '--init-hooks');
+  if (hookIndex !== -1) {
+    const nextArg = args[hookIndex + 1];
+    const target = nextArg && !nextArg.startsWith('-') ? path.resolve(process.cwd(), nextArg) : process.cwd();
+    const force = args.includes('-f') || args.includes('--force');
+    runInitHooks(target, force);
+    return;
+  }
+
   const force = args.includes('-f') || args.includes('--force');
-  const positionalArgs = args.filter((a) => !a.startsWith('-'));
+  const withHooks = args.includes('--with-hooks');
+  const positionalArgs = args.filter((a) => !a.startsWith('-') && a !== 'init-hooks');
   const rawName = positionalArgs[0] || 'nexus-kit-app';
   const isCurrentDir = rawName === '.';
   const projectDir = isCurrentDir ? process.cwd() : path.resolve(process.cwd(), rawName);
   const projectName = isCurrentDir ? path.basename(projectDir) : rawName;
 
   console.log(BANNER);
-  console.log(`${c.blue}ℹ${c.reset} Initializing ${c.bold}${projectName}${c.reset} at ${c.dim}${projectDir}${c.reset}${force ? ` ${c.yellow}(--force)${c.reset}` : ''}\n`);
+  console.log(`${c.blue}ℹ${c.reset} Initializing ${c.bold}${projectName}${c.reset} at ${c.dim}${projectDir}${c.reset}${force ? ` ${c.yellow}(--force)${c.reset}` : ''}${withHooks ? ` ${c.cyan}(--with-hooks)${c.reset}` : ''}\n`);
 
-  const result = scaffoldProject(projectDir, { force, projectName });
+  const result = scaffoldProject(projectDir, { force, projectName, withHooks });
 
   for (const relPath of result.created) {
     console.log(`  ${c.green}[CREATED]${c.reset}     ${relPath}`);
+  }
+  if (result.hook && result.hook.success) {
+    console.log(`  ${c.green}[CREATED]${c.reset}     .git/hooks/pre-commit (Git Hard Gate active)`);
   }
   for (const relPath of result.overwritten) {
     console.log(`  ${c.yellow}[OVERWRITTEN]${c.reset} ${relPath}`);
@@ -196,9 +228,9 @@ function run() {
   console.log(`${c.bold}Next steps:${c.reset}`);
   if (!isCurrentDir) {
     console.log(`  1. ${c.cyan}cd ${projectName}${c.reset}`);
-    console.log(`  2. Open the project in your AI editor (Antigravity, Claude Code, Cursor, GitHub Copilot)`);
+    console.log(`  2. Open the project in your AI editor (Antigravity, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot)`);
   } else {
-    console.log(`  1. Open the project in your AI editor (Antigravity, Claude Code, Cursor, GitHub Copilot)`);
+    console.log(`  1. Open the project in your AI editor (Antigravity, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot)`);
   }
   console.log(`  3. Update technology guidelines in ${c.cyan}.specify/constitution.md${c.reset}`);
   console.log(`  4. Approve specs with ${c.cyan}npx create-nexus-kit --approve <spec-file>${c.reset}`);

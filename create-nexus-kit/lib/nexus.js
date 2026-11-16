@@ -1,8 +1,9 @@
+import { execSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '1.5.0';
+export const VERSION = '1.6.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -257,6 +258,132 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
   - For planning/architecture: follow \`.agents/skills/sdd-planner/SKILL.md\` and use \`.specify/templates/spec-template.md\`.
   - For implementation: follow \`.agents/skills/sdd-coder/SKILL.md\` and stay strictly within \`In-Scope\` bounds.
   - For verification: follow \`.agents/skills/sdd-verifier/SKILL.md\` to audit against Acceptance Criteria.
+`,
+
+  windsurfAdapter: `# Windsurf Cascade Rules — Nexus Kit SDD Protocol
+
+This project is governed by **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Directives
+1. **NO VIBE CODING**: Never write or modify application code in \`src/\` without an approved specification in \`.specify/tasks/\`.
+2. **Read Constitution First**: Always consult \`.specify/constitution.md\` before planning or coding to verify tech stack constraints and quality gates.
+3. **Execute the SDD Triad** (located in \`.agents/skills/\`):
+   - **Planning**: Load \`.agents/skills/sdd-planner/SKILL.md\` and \`.specify/templates/spec-template.md\`. Draft specifications into \`.specify/tasks/\` and wait for human approval before coding.
+   - **Coding**: Load \`.agents/skills/sdd-coder/SKILL.md\` and implement strictly within \`In-Scope\` bounds of approved specs.
+   - **Verification**: Load \`.agents/skills/sdd-verifier/SKILL.md\` to audit implementation against all Acceptance Criteria.
+`,
+
+  clineAdapter: `# Cline Rules — Nexus Kit SDD Protocol
+
+This repository adheres to **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Rules
+1. **NO VIBE CODING**: Never write or modify application code in \`src/\` without an approved specification in \`.specify/tasks/\`.
+2. **Read Constitution First**: Check \`.specify/constitution.md\` before writing any code to ensure compliance with the tech stack and typing rules.
+3. **SDD Workflow** (located in \`.agents/skills/\`):
+   - **sdd-planner**: When asked to create or modify a feature, use \`.agents/skills/sdd-planner/SKILL.md\` and \`.specify/templates/spec-template.md\`. Save to \`.specify/tasks/\` and require human approval (\`--approve\`).
+   - **sdd-coder**: Follow \`.agents/skills/sdd-coder/SKILL.md\` only after verifying approval with \`nexus-kit --verify-spec <spec-path>\`.
+   - **sdd-verifier**: Follow \`.agents/skills/sdd-verifier/SKILL.md\` to audit Acceptance Criteria before completing the task.
+`,
+
+  preCommitHook: `#!/bin/sh
+# Nexus Kit Git Hard Gate — Pre-commit Hook
+# Prevents unapproved vibe coding in src/
+
+# 1. Identify staged files in src/
+STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^src/' || true)
+
+if [ -z "$STAGED_SRC" ]; then
+  # No modifications to src/, allow commit
+  exit 0
+fi
+
+# 2. Check if node is available
+if ! command -v node >/dev/null 2>&1; then
+  printf "\\033[1;31m[NEXUS-KIT HARD GATE ERROR]\\033[0m node is required to verify specification integrity.\\n"
+  exit 1
+fi
+
+# 3. Run inline Node validator
+node -e '
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const tasksDir = path.join(process.cwd(), ".specify", "tasks");
+if (!fs.existsSync(tasksDir)) {
+  console.error("\\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\\x1b[0m");
+  console.error("  Commit blocked: Staged changes in src/ without a .specify/tasks/ directory!");
+  console.error("  Rule: NO VIBE CODING - Always plan and approve a specification first.\\n");
+  process.exit(1);
+}
+
+const specFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith("-spec.md") || f.endsWith(".spec.md"));
+if (specFiles.length === 0) {
+  console.error("\\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\\x1b[0m");
+  console.error("  Commit blocked: Staged changes in src/ with zero specifications in .specify/tasks/!");
+  console.error("  Rule: NO VIBE CODING - Run sdd-planner and approve a spec first.\\n");
+  process.exit(1);
+}
+
+function parseMeta(content) {
+  const meta = {};
+  for (const line of content.split("\\n")) {
+    const match = line.match(/^>\\s*\\*\\*([^:]+):\\*\\*\\s*\`?([^\`\\r\\n]+)\`?/);
+    if (match) {
+      meta[match[1].trim()] = match[2].trim();
+    }
+  }
+  return meta;
+}
+
+function computeHash(content) {
+  const lines = content.replace(/\\r\\n/g, "\\n").split("\\n");
+  const filtered = lines.filter(line => {
+    return !/^>\\s*\\*\\*(Status|Approved-By|Approved-At|Approved-Hash):\\*\\*/i.test(line);
+  });
+  const normalized = filtered.map(line => {
+    if (/^(\\s*[-*]\\s*\\[)[xX](\\]\\s*)/.test(line)) {
+      return line.replace(/^(\\s*[-*]\\s*\\[)[xX](\\]\\s*)/, "$1 $2");
+    }
+    return line;
+  });
+  const canonical = normalized.join("\\n").trim();
+  const digest = crypto.createHash("sha256").update(canonical, "utf8").digest("hex");
+  return \`sha256:\${digest}\`;
+}
+
+let validApprovedSpecs = 0;
+let driftedSpecs = 0;
+
+for (const file of specFiles) {
+  const full = path.join(tasksDir, file);
+  const raw = fs.readFileSync(full, "utf8");
+  const meta = parseMeta(raw);
+  const status = meta["Status"];
+
+  if (status === "Approved" || status === "Completed" || status === "In Progress") {
+    const stampedHash = meta["Approved-Hash"];
+    const liveHash = computeHash(raw);
+    if (stampedHash && stampedHash === liveHash) {
+      validApprovedSpecs++;
+    } else {
+      driftedSpecs++;
+      console.warn(\`\\x1b[33m[WARN]\\x1b[0m Spec \${file} is marked \${status} but Approved-Hash does not match content (tampered/drifted)!\`);
+    }
+  }
+}
+
+if (validApprovedSpecs === 0) {
+  console.error("\\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\\x1b[0m");
+  console.error("  Commit blocked: Changes staged in src/, but NO Approved or Completed spec found in .specify/tasks/!");
+  console.error("  Hint: Use \\"nexus-kit --approve .specify/tasks/<spec-file>.md\\" after review.\\n");
+  process.exit(1);
+}
+
+console.log(\`\\x1b[32m✔ [NEXUS-KIT HARD GATE]\\x1b[0m Verified \${validApprovedSpecs} approved spec(s). Commit allowed.\`);
+process.exit(0);
+'
 `,
 
   readme: (projectName) => `# ${projectName}
@@ -549,6 +676,60 @@ export function verifySpecForCoding(specPath) {
 }
 
 /**
+ * Installs the Nexus Kit pre-commit hook into targetDir's .git/hooks directory.
+ */
+export function installGitPreCommitHook(targetDir, options = {}) {
+  const force = Boolean(options.force);
+  const gitDir = path.join(targetDir, '.git');
+
+  if (!fs.existsSync(gitDir)) {
+    return {
+      success: false,
+      hookPath: null,
+      reason: 'Target directory is not a Git repository. Run "git init" first.'
+    };
+  }
+
+  const hooksDir = path.join(gitDir, 'hooks');
+  if (!fs.existsSync(hooksDir)) {
+    fs.mkdirSync(hooksDir, { recursive: true });
+  }
+
+  const hookPath = path.join(hooksDir, 'pre-commit');
+  const existed = fs.existsSync(hookPath);
+
+  if (existed && !force) {
+    return {
+      success: false,
+      hookPath,
+      reason: 'Pre-commit hook already exists. Use --force to overwrite.'
+    };
+  }
+
+  try {
+    fs.writeFileSync(hookPath, TEMPLATES.preCommitHook, { encoding: 'utf8', mode: 0o755 });
+    try {
+      fs.chmodSync(hookPath, 0o755);
+    } catch {
+      // Non-fatal on platforms where chmod is unsupported
+    }
+  } catch (err) {
+    return {
+      success: false,
+      hookPath,
+      reason: `Failed to write pre-commit hook: ${err.message}`
+    };
+  }
+
+  return {
+    success: true,
+    hookPath,
+    overwritten: existed,
+    message: existed ? 'Pre-commit hook overwritten successfully' : 'Pre-commit hook installed successfully'
+  };
+}
+
+/**
  * Scaffolds a Nexus Kit project into targetDir safely without overwriting existing files unless force=true.
  */
 export function scaffoldProject(targetDir, options = {}) {
@@ -585,6 +766,8 @@ export function scaffoldProject(targetDir, options = {}) {
     { relPath: 'CLAUDE.md', content: TEMPLATES.claudeAdapter },
     { relPath: '.cursor/rules/nexus-kit.mdc', content: TEMPLATES.cursorAdapter },
     { relPath: '.github/copilot-instructions.md', content: TEMPLATES.copilotAdapter },
+    { relPath: '.windsurfrules', content: TEMPLATES.windsurfAdapter },
+    { relPath: '.clinerules', content: TEMPLATES.clineAdapter },
     { relPath: 'src/.gitkeep', content: '' },
     { relPath: 'README.md', content: TEMPLATES.readme(projectName) },
     { relPath: '.gitignore', content: TEMPLATES.gitignore }
@@ -611,12 +794,26 @@ export function scaffoldProject(targetDir, options = {}) {
     }
   }
 
+  let hookResult = null;
+  if (options.withHooks) {
+    const gitDir = path.join(targetDir, '.git');
+    if (!fs.existsSync(gitDir)) {
+      try {
+        execSync('git init', { cwd: targetDir, stdio: 'ignore' });
+      } catch {
+        // Non-fatal if git is missing
+      }
+    }
+    hookResult = installGitPreCommitHook(targetDir, { force });
+  }
+
   return {
     targetDir,
     projectName,
     created,
     overwritten,
-    skipped
+    skipped,
+    hook: hookResult
   };
 }
 
@@ -847,7 +1044,44 @@ export function validateProject(targetDir) {
     }
   }
 
-  // 6. Source Repo Template Parity Check (runs when targetDir is the Nexus Kit source repository itself)
+  const windsurfPath = path.join(targetDir, '.windsurfrules');
+  if (!fs.existsSync(windsurfPath)) {
+    addResult('WARN', 'adapter:windsurf', 'Missing Windsurf IDE adapter (.windsurfrules)');
+  } else {
+    const raw = fs.readFileSync(windsurfPath, 'utf8');
+    const missingRefs = checkCrossRefs(raw);
+    if (missingRefs.length > 0) {
+      addResult('WARN', 'adapter:windsurf', `.windsurfrules is missing cross-references to: ${missingRefs.join(', ')}`);
+    } else {
+      addResult('PASS', 'adapter:windsurf', 'IDE Adapter: Windsurf Cascade (.windsurfrules)');
+    }
+  }
+
+  const clinePath = path.join(targetDir, '.clinerules');
+  if (!fs.existsSync(clinePath)) {
+    addResult('WARN', 'adapter:cline', 'Missing Cline / Roo Code adapter (.clinerules)');
+  } else {
+    const raw = fs.readFileSync(clinePath, 'utf8');
+    const missingRefs = checkCrossRefs(raw);
+    if (missingRefs.length > 0) {
+      addResult('WARN', 'adapter:cline', `.clinerules is missing cross-references to: ${missingRefs.join(', ')}`);
+    } else {
+      addResult('PASS', 'adapter:cline', 'IDE Adapter: Cline / Roo Code (.clinerules)');
+    }
+  }
+
+  // 6. Git Pre-Commit Hook Check
+  const gitDir = path.join(targetDir, '.git');
+  if (fs.existsSync(gitDir)) {
+    const hookPath = path.join(gitDir, 'hooks', 'pre-commit');
+    if (fs.existsSync(hookPath)) {
+      addResult('PASS', 'git:hook', 'Git Pre-commit Hard Gate is installed and active (.git/hooks/pre-commit)');
+    } else {
+      addResult('WARN', 'git:hook', 'Git repository detected, but pre-commit hook is not installed. Run "nexus-kit init-hooks" to enforce SDD gates.');
+    }
+  }
+
+  // 7. Source Repo Template Parity Check (runs when targetDir is the Nexus Kit source repository itself)
   const cliLibPath = path.join(targetDir, 'create-nexus-kit/lib/nexus.js');
   if (fs.existsSync(cliLibPath)) {
     const parityPairs = [
@@ -858,7 +1092,9 @@ export function validateProject(targetDir) {
       { rel: 'AGENTS.md', expected: TEMPLATES.agentsAdapter },
       { rel: 'CLAUDE.md', expected: TEMPLATES.claudeAdapter },
       { rel: '.cursor/rules/nexus-kit.mdc', expected: TEMPLATES.cursorAdapter },
-      { rel: '.github/copilot-instructions.md', expected: TEMPLATES.copilotAdapter }
+      { rel: '.github/copilot-instructions.md', expected: TEMPLATES.copilotAdapter },
+      { rel: '.windsurfrules', expected: TEMPLATES.windsurfAdapter },
+      { rel: '.clinerules', expected: TEMPLATES.clineAdapter }
     ];
 
     const drifted = [];
