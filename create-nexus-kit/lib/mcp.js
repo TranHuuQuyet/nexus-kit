@@ -34,15 +34,31 @@ export function createSpecDraft({ id, title, author, targetPath, targetDir = pro
     throw new Error('Both "id" and "title" are required to create a task specification.');
   }
 
+  if (String(id).includes('/') || String(id).includes('\\') || String(id).includes('..')) {
+    throw new Error('Invalid spec id: Directory traversal detected.');
+  }
+
+  const rawId = String(id).trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!rawId) {
+    throw new Error('Task "id" must contain at least one valid alphanumeric character.');
+  }
+  const cleanId = rawId.padStart(3, '0');
+  const slug = slugify(title);
+  if (!slug) {
+    throw new Error('Task "title" must contain at least one valid alphanumeric character.');
+  }
+
   const tasksDir = path.resolve(targetDir, '.specify/tasks');
   if (!fs.existsSync(tasksDir)) {
     fs.mkdirSync(tasksDir, { recursive: true });
   }
 
-  const cleanId = String(id).padStart(3, '0');
-  const slug = slugify(title);
   const filename = `${cleanId}-${slug}-spec.md`;
   const filePath = path.join(tasksDir, filename);
+
+  if (!filePath.startsWith(tasksDir + path.sep)) {
+    throw new Error('Invalid spec path: Directory traversal detected.');
+  }
 
   const today = new Date().toISOString().split('T')[0];
   const authorName = author || 'sdd-planner';
@@ -386,6 +402,12 @@ export function handleToolCall(name, args = {}, context = {}) {
 
     case 'nexus_approve_spec': {
       try {
+        if (!args.specPath || typeof args.specPath !== 'string' || !args.specPath.endsWith('.md')) {
+          return {
+            content: [{ type: 'text', text: '[ERROR] Invalid spec path: Target file must be a markdown specification (*.md)' }],
+            isError: true
+          };
+        }
         const fullPath = path.isAbsolute(args.specPath) ? args.specPath : path.resolve(targetDir, args.specPath);
         const result = approveSpec(fullPath, { by: args.by });
         return {

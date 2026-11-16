@@ -329,6 +329,25 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.equal(badJsonRes.error.code, -32700);
     assert.match(badJsonRes.error.message, /Parse error/);
   });
+
+  test('createSpecDraft blocks path traversal and approveSpec validates .md extension', async () => {
+    // 1. Path traversal attempt in ID
+    assert.throws(
+      () => createSpecDraft({ id: '../../hack', title: 'Malicious', targetDir: tmpDir }),
+      /Directory traversal detected|must contain at least one/
+    );
+
+    // 2. Reject non-markdown file in approve_spec
+    const fakePkg = path.join(tmpDir, 'package.json');
+    const approveBad = await client.call('tools/call', {
+      name: 'nexus_approve_spec',
+      arguments: { specPath: fakePkg }
+    }, 90);
+
+    assert.equal(approveBad.id, 90);
+    assert.equal(approveBad.result.isError, true);
+    assert.match(approveBad.result.content[0].text, /must be a markdown specification/i);
+  });
 });
 
 describe('CLI mcp subcommand', () => {

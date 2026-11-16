@@ -14,7 +14,9 @@ import {
   validateProject,
   installGitPreCommitHook,
   getTasksSummary,
-  renderTasksBoard
+  renderTasksBoard,
+  approveSpec,
+  extractSectionContent
 } from '../lib/nexus.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -478,5 +480,33 @@ describe('Terminal Status Board & Metrics', () => {
     assert.equal(cliJson.status, 0);
     const cliParsed = JSON.parse(cliJson.stdout);
     assert.equal(cliParsed.tasks.length, 2);
+  });
+});
+
+describe('Security Hardening & Parser Boundaries (v2.0.1)', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('approveSpec rejects non-markdown file paths', () => {
+    const jsonFile = path.join(tmpDir, 'data.json');
+    fs.writeFileSync(jsonFile, '{"name": "test"}', 'utf8');
+
+    assert.throws(
+      () => approveSpec(jsonFile),
+      /Target file must be a markdown specification/i
+    );
+  });
+
+  test('extractSectionContent properly terminates on H1 and H2 headings', () => {
+    const docWithH1 = `## Workflow\nLine 1\nLine 2\n# Overview\nLine 3`;
+    const content = extractSectionContent(docWithH1, 'Workflow');
+    assert.equal(content, 'Line 1\nLine 2');
   });
 });

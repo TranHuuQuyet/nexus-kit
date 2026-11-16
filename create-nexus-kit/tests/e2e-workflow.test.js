@@ -262,5 +262,14 @@ test('AC-2: throws TypeError on non-string inputs', () => {
     const commitApproved = spawnSync('git', ['commit', '-m', 'feat: properly specified feature'], { cwd: projectDir, encoding: 'utf8' });
     assert.equal(commitApproved.status, 0, `Commit failed: ${commitApproved.stderr}\n${commitApproved.stdout}`);
     assert.match(commitApproved.stdout + commitApproved.stderr, /Verified 1 approved spec/);
+
+    // 7. Tamper with spec (requirement drift) -> Pre-commit hook MUST BLOCK
+    fs.appendFileSync(path.join(projectDir, '.specify/tasks/001-feature-spec.md'), '\nExtra sneaky requirement\n');
+    fs.writeFileSync(path.join(projectDir, 'src/unauthorized.js'), 'export const updated = true;', 'utf8');
+    spawnSync('git', ['add', 'src/unauthorized.js'], { cwd: projectDir });
+
+    const commitDrifted = spawnSync('git', ['commit', '-m', 'feat: should fail on drift'], { cwd: projectDir, encoding: 'utf8' });
+    assert.notEqual(commitDrifted.status, 0, 'Commit should be blocked when spec is drifted');
+    assert.match(commitDrifted.stderr + commitDrifted.stdout, /drift detected/i);
   });
 });
