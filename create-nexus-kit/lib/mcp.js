@@ -29,7 +29,7 @@ function slugify(text) {
 /**
  * Helper to create a new task spec draft using the Spec Kit template.
  */
-export function createSpecDraft({ id, title, author, targetPath, targetDir = process.cwd() }) {
+export function createSpecDraft({ id, title, author, targetPath, targetDir = process.cwd(), force = false }) {
   if (!id || !title) {
     throw new Error('Both "id" and "title" are required to create a task specification.');
   }
@@ -58,6 +58,10 @@ export function createSpecDraft({ id, title, author, targetPath, targetDir = pro
 
   if (!filePath.startsWith(tasksDir + path.sep)) {
     throw new Error('Invalid spec path: Directory traversal detected.');
+  }
+
+  if (fs.existsSync(filePath) && !force) {
+    throw new Error(`Specification file already exists: ${filename}. Pass force: true to overwrite.`);
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -168,27 +172,13 @@ export const MCP_TOOLS = [
         targetDir: {
           type: 'string',
           description: 'Target project root directory.'
+        },
+        force: {
+          type: 'boolean',
+          description: 'Set to true to overwrite existing specification file if it exists (default: false).'
         }
       },
       required: ['id', 'title']
-    }
-  },
-  {
-    name: 'nexus_approve_spec',
-    description: 'Approve a specification and stamp it with a canonical SHA-256 hash (Human Approval Gate).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        specPath: {
-          type: 'string',
-          description: 'Relative or absolute path to the spec file to approve.'
-        },
-        by: {
-          type: 'string',
-          description: 'Approver name (default: current user / supervisor).'
-        }
-      },
-      required: ['specPath']
     }
   }
 ];
@@ -387,7 +377,8 @@ export function handleToolCall(name, args = {}, context = {}) {
           title: args.title,
           author: args.author,
           targetPath: args.targetPath,
-          targetDir
+          targetDir,
+          force: Boolean(args.force)
         });
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
@@ -401,35 +392,13 @@ export function handleToolCall(name, args = {}, context = {}) {
     }
 
     case 'nexus_approve_spec': {
-      try {
-        if (!args.specPath || typeof args.specPath !== 'string' || !args.specPath.endsWith('.md')) {
-          return {
-            content: [{ type: 'text', text: '[ERROR] Invalid spec path: Target file must be a markdown specification (*.md)' }],
-            isError: true
-          };
-        }
-        const fullPath = path.isAbsolute(args.specPath) ? args.specPath : path.resolve(targetDir, args.specPath);
-        const result = approveSpec(fullPath, { by: args.by });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                success: true,
-                filePath: fullPath,
-                status: 'Approved',
-                approvedBy: result.approvedBy,
-                hash: result.hash
-              }, null, 2)
-            }
-          ]
-        };
-      } catch (err) {
-        return {
-          content: [{ type: 'text', text: `[ERROR] Failed to approve spec: ${err.message}` }],
-          isError: true
-        };
-      }
+      return {
+        content: [{
+          type: 'text',
+          text: '[FORBIDDEN] AI Self-Approval is prohibited by Nexus Kit Constitution. Specifications must be reviewed and approved by a human engineer via terminal CLI: `npx create-nexus-kit --approve <spec-file>`'
+        }],
+        isError: true
+      };
     }
 
     default:

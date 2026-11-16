@@ -293,6 +293,19 @@ node -e '
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { execSync } = require("child_process");
+
+let stagedSrcFiles = [];
+try {
+  const output = execSync("git diff --cached --name-only --diff-filter=ACMR", { encoding: "utf8" });
+  stagedSrcFiles = output.split(/\\r?\\n/).map(function(f) { return f.trim().replace(/\\\\/g, "/"); }).filter(function(f) { return f.startsWith("src/"); });
+} catch (e) {
+  // If git diff fails, allow fallback
+}
+
+if (stagedSrcFiles.length === 0) {
+  process.exit(0);
+}
 
 const tasksDir = path.join(process.cwd(), ".specify", "tasks");
 if (!fs.existsSync(tasksDir)) {
@@ -302,7 +315,7 @@ if (!fs.existsSync(tasksDir)) {
   process.exit(1);
 }
 
-const specFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith("-spec.md") || f.endsWith(".spec.md"));
+const specFiles = fs.readdirSync(tasksDir).filter(function(f) { return f.endsWith("-spec.md") || f.endsWith(".spec.md"); });
 if (specFiles.length === 0) {
   console.error("\\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\\x1b[0m");
   console.error("  Commit blocked: Staged changes in src/ with zero specifications in .specify/tasks/!");
@@ -313,7 +326,7 @@ if (specFiles.length === 0) {
 function parseMeta(content) {
   const meta = {};
   for (const line of content.split("\\n")) {
-    const match = line.match(/^>\\s*\\*\\*([^:]+):\\*\\*\\s*\`?([^\`\\r\\n]+)\`?/);
+    const match = line.match(/^>\\s*\\*\\*([^:]+):\\*\\*\\s*[\\x60]?([^\\x60\\r\\n]+)[\\x60]?/);
     if (match) {
       meta[match[1].trim()] = match[2].trim();
     }
@@ -323,10 +336,10 @@ function parseMeta(content) {
 
 function computeHash(content) {
   const lines = content.replace(/\\r\\n/g, "\\n").split("\\n");
-  const filtered = lines.filter(line => {
+  const filtered = lines.filter(function(line) {
     return !/^>\\s*\\*\\*(Status|Approved-By|Approved-At|Approved-Hash):\\*\\*/i.test(line);
   });
-  const normalized = filtered.map(line => {
+  const normalized = filtered.map(function(line) {
     if (/^(\\s*[-*]\\s*\\[)[xX](\\]\\s*)/.test(line)) {
       return line.replace(/^(\\s*[-*]\\s*\\[)[xX](\\]\\s*)/, "$1 $2");
     }
@@ -334,11 +347,24 @@ function computeHash(content) {
   });
   const canonical = normalized.join("\\n").trim();
   const digest = crypto.createHash("sha256").update(canonical, "utf8").digest("hex");
-  return \`sha256:\${digest}\`;
+  return "sha256:" + digest;
+}
+
+function isPathCovered(filePath, pattern) {
+  const normFile = filePath.replace(/\\\\/g, "/");
+  const normPattern = pattern.replace(/\\\\/g, "/").trim();
+  if (normPattern === "src/..." || normPattern === "src/*" || normPattern === "src/**" || normPattern === "src/" || normPattern === "src") {
+    return normFile.startsWith("src/");
+  }
+  if (normPattern.endsWith("/")) {
+    return normFile.startsWith(normPattern);
+  }
+  return normFile === normPattern || normFile.startsWith(normPattern + "/");
 }
 
 let validApprovedSpecs = 0;
 let driftedSpecs = 0;
+const activeTargetPaths = [];
 
 for (const file of specFiles) {
   const full = path.join(tasksDir, file);
@@ -351,16 +377,23 @@ for (const file of specFiles) {
     const liveHash = computeHash(raw);
     if (stampedHash && stampedHash === liveHash) {
       validApprovedSpecs++;
+      const targetMeta = meta["Target Path"] || meta["Target-Path"] || "";
+      if (targetMeta) {
+        const parts = targetMeta.split(",").map(function(p) { return p.trim().replace(/^[\\x60]|[\\x60]$/g, ""); }).filter(Boolean);
+        for (const part of parts) {
+          activeTargetPaths.push({ specFile: file, pattern: part });
+        }
+      }
     } else {
       driftedSpecs++;
-      console.warn(\`\\x1b[33m[WARN]\\x1b[0m Spec \${file} is marked \${status} but Approved-Hash does not match content (tampered/drifted)!\`);
+      console.warn("\\x1b[33m[WARN]\\x1b[0m Spec " + file + " is marked " + status + " but Approved-Hash does not match content (tampered/drifted)!");
     }
   }
 }
 
 if (driftedSpecs > 0) {
   console.error("\\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\\x1b[0m");
-  console.error(\`  Commit blocked: \${driftedSpecs} specification(s) in .specify/tasks/ have been modified after approval (drift detected)!\`);
+  console.error("  Commit blocked: " + driftedSpecs + " specification(s) in .specify/tasks/ have been modified after approval (drift detected)!");
   console.error("  Rule: Requirement drift must be re-reviewed and re-stamped using \\"nexus-kit --approve <spec-file>\\".\\n");
   process.exit(1);
 }
@@ -372,7 +405,25 @@ if (validApprovedSpecs === 0) {
   process.exit(1);
 }
 
-console.log(\`\\x1b[32m✔ [NEXUS-KIT HARD GATE]\\x1b[0m Verified \${validApprovedSpecs} approved spec(s). Commit allowed.\`);
+const uncoveredFiles = stagedSrcFiles.filter(function(f) {
+  return !activeTargetPaths.some(function(t) { return isPathCovered(f, t.pattern); });
+});
+
+if (uncoveredFiles.length > 0) {
+  console.error("\\x1b[1;31m[NEXUS-KIT HARD GATE VIOLATION]\\x1b[0m");
+  console.error("  Commit blocked: The following staged file(s) in src/ are NOT covered by any approved specification Target Path:");
+  uncoveredFiles.forEach(function(f) { console.error("    - " + f); });
+  console.error("  Active Approved Specs Target Paths:");
+  if (activeTargetPaths.length === 0) {
+    console.error("    (No Target Path defined in active specs)");
+  } else {
+    activeTargetPaths.forEach(function(t) { console.error("    - [" + t.specFile + "] -> " + t.pattern); });
+  }
+  console.error("  Rule: NO VIBE CODING - Every code change in src/ must be scoped within an approved spec.\\n");
+  process.exit(1);
+}
+
+console.log("\\x1b[32m✔ [NEXUS-KIT HARD GATE]\\x1b[0m Verified " + stagedSrcFiles.length + " staged file(s) across " + validApprovedSpecs + " approved spec(s). Commit allowed.");
 process.exit(0);
 '
 `,

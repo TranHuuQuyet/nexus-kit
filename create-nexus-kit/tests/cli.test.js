@@ -483,7 +483,7 @@ describe('Terminal Status Board & Metrics', () => {
   });
 });
 
-describe('Security Hardening & Parser Boundaries (v2.0.1)', () => {
+describe('Security Hardening, Path Boundaries & Parser Safety (v2.1.0)', () => {
   let tmpDir;
 
   beforeEach(() => {
@@ -494,14 +494,69 @@ describe('Security Hardening & Parser Boundaries (v2.0.1)', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test('approveSpec rejects non-markdown file paths', () => {
+  test('approveSpec rejects non-markdown file paths and non-spec filenames', () => {
     const jsonFile = path.join(tmpDir, 'data.json');
     fs.writeFileSync(jsonFile, '{"name": "test"}', 'utf8');
 
     assert.throws(
       () => approveSpec(jsonFile),
-      /Target file must be a markdown specification/i
+      /Target file must be a specification file/i
     );
+
+    const txtFile = path.join(tmpDir, 'notes.txt');
+    fs.writeFileSync(txtFile, 'hello', 'utf8');
+    assert.throws(
+      () => approveSpec(txtFile),
+      /Target file must be a specification file/i
+    );
+  });
+
+  test('approveSpec rejects files outside .specify/tasks/ directory (e.g. README.md or constitution.md)', () => {
+    const readmeFile = path.join(tmpDir, 'README-spec.md');
+    fs.writeFileSync(readmeFile, '# SPEC-001: Fake', 'utf8');
+
+    assert.throws(
+      () => approveSpec(readmeFile),
+      /Specification must be located in \.specify\/tasks\/ directory/i
+    );
+
+    const specifyDir = path.join(tmpDir, '.specify');
+    fs.mkdirSync(specifyDir, { recursive: true });
+    const constFile = path.join(specifyDir, 'constitution.md');
+    fs.writeFileSync(constFile, '# Core Constitution', 'utf8');
+
+    assert.throws(
+      () => approveSpec(constFile),
+      /Target file must be a specification file/i
+    );
+  });
+
+  test('approveSpec rejects spec file missing # SPEC-[ID]: [Title] heading', () => {
+    const tasksDir = path.join(tmpDir, '.specify/tasks');
+    fs.mkdirSync(tasksDir, { recursive: true });
+    const invalidSpec = path.join(tasksDir, '001-invalid-spec.md');
+    fs.writeFileSync(invalidSpec, 'Just some notes without spec heading', 'utf8');
+
+    assert.throws(
+      () => approveSpec(invalidSpec),
+      /Invalid specification content: Missing "# SPEC-\[ID\]: \[Title\]" heading/i
+    );
+  });
+
+  test('approveSpec succeeds for valid spec file inside .specify/tasks/', () => {
+    const tasksDir = path.join(tmpDir, '.specify/tasks');
+    fs.mkdirSync(tasksDir, { recursive: true });
+    const validSpec = path.join(tasksDir, '001-auth-spec.md');
+    fs.writeFileSync(validSpec, '# SPEC-001: Authentication Module\n\n> **Status:** `Draft`\n\nContent here.', 'utf8');
+
+    const result = approveSpec(validSpec, { by: 'Human Lead' });
+    assert.equal(result.status, 'Approved');
+    assert.equal(result.approvedBy, 'Human Lead');
+    assert.ok(result.hash.startsWith('sha256:'));
+
+    const updated = fs.readFileSync(validSpec, 'utf8');
+    assert.match(updated, /> \*\*Status:\*\* `Approved`/);
+    assert.match(updated, /> \*\*Approved-Hash:\*\* `sha256:/);
   });
 
   test('extractSectionContent properly terminates on H1 and H2 headings', () => {

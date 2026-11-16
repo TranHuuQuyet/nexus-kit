@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '2.0.1';
+export const VERSION = '2.1.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -154,15 +154,33 @@ export function computeSpecHash(rawMarkdown) {
  * Stamps a specification with Status: Approved and its canonical SHA-256 hash.
  */
 export function approveSpec(specPath, options = {}) {
-  if (typeof specPath !== 'string' || !specPath.endsWith('.md')) {
+  if (typeof specPath !== 'string') {
     throw new Error(`Target file must be a markdown specification (*.md): ${specPath}`);
   }
 
-  if (!fs.existsSync(specPath)) {
+  const resolved = path.resolve(specPath);
+  const baseName = path.basename(resolved);
+
+  if (!baseName.endsWith('-spec.md') && !baseName.endsWith('.spec.md')) {
+    throw new Error(`Target file must be a specification file (*-spec.md or *.spec.md): ${baseName}`);
+  }
+
+  const parentDir = path.basename(path.dirname(resolved));
+  const grandparentDir = path.basename(path.dirname(path.dirname(resolved)));
+  if (parentDir !== 'tasks' || grandparentDir !== '.specify') {
+    throw new Error(`Specification must be located in .specify/tasks/ directory: ${specPath}`);
+  }
+
+  if (!fs.existsSync(resolved)) {
     throw new Error(`Specification not found: ${specPath}`);
   }
 
-  const raw = fs.readFileSync(specPath, 'utf8').replace(/\r\n/g, '\n');
+  const raw = fs.readFileSync(resolved, 'utf8').replace(/\r\n/g, '\n');
+
+  if (!/^#\s*(?:\[?SPEC-)?([A-Za-z0-9_-]+)\]?:\s*(.+)$/m.test(raw)) {
+    throw new Error(`Invalid specification content: Missing "# SPEC-[ID]: [Title]" heading in ${baseName}`);
+  }
+
   const hash = computeSpecHash(raw);
   const approvedBy = options.by || process.env.USER || 'Human Reviewer';
   const approvedAt = new Date().toISOString();
@@ -193,10 +211,10 @@ export function approveSpec(specPath, options = {}) {
   upsertField('Approved-At', approvedAt);
   upsertField('Approved-Hash', hash);
 
-  fs.writeFileSync(specPath, lines.join('\n'), 'utf8');
+  fs.writeFileSync(resolved, lines.join('\n'), 'utf8');
 
   return {
-    specPath,
+    specPath: resolved,
     status: 'Approved',
     approvedBy,
     approvedAt,

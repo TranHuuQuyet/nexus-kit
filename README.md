@@ -174,8 +174,8 @@ Nexus Kit v2.0+ provides a native, zero-dependency MCP server over `stdio` enabl
   - `nexus_get_specs`: Lists all specifications, statuses, and Acceptance Criteria progress.
   - `nexus_verify_spec`: Verifies SHA-256 integrity hash to prevent requirement drift.
   - `nexus_doctor`: Runs full integrity and lifecycle diagnostics.
-  - `nexus_create_spec`: Generates standard task spec draft adhering to Spec Kit.
-  - `nexus_approve_spec`: Human approval gate stamping canonical SHA-256 hash.
+  - `nexus_create_spec`: Generates standard task spec draft with non-overwrite safety (`force: false` by default).
+  > **Note on Human Approval Gate**: `nexus_approve_spec` is intentionally NOT exposed to AI agents via MCP to prevent autonomous self-approval. Specification approval remains exclusively a human action via the terminal CLI (`nexus-kit --approve <spec-file>`).
 - **Resources**: `nexus://constitution`, `nexus://specs`, `nexus://board`
 - **Prompts**: `sdd_plan`, `sdd_implement`, `sdd_verify`
 

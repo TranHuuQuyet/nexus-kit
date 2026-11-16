@@ -10,7 +10,8 @@ import readline from 'node:readline';
 
 import {
   VERSION,
-  scaffoldProject
+  scaffoldProject,
+  approveSpec
 } from '../lib/nexus.js';
 import {
   createMcpServer,
@@ -114,7 +115,7 @@ describe('Model Context Protocol (MCP) Server', () => {
     const res = await client.call('tools/list', {}, 10);
     assert.equal(res.id, 10);
     assert.ok(Array.isArray(res.result.tools));
-    assert.equal(res.result.tools.length, 6);
+    assert.equal(res.result.tools.length, 5);
 
     const toolNames = res.result.tools.map((t) => t.name);
     assert.ok(toolNames.includes('nexus_check_constitution'));
@@ -122,7 +123,7 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.ok(toolNames.includes('nexus_verify_spec'));
     assert.ok(toolNames.includes('nexus_doctor'));
     assert.ok(toolNames.includes('nexus_create_spec'));
-    assert.ok(toolNames.includes('nexus_approve_spec'));
+    assert.equal(toolNames.includes('nexus_approve_spec'), false);
   });
 
   test('executes nexus_check_constitution tool', async () => {
@@ -139,7 +140,7 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.equal(parsed.techStackConfigured, true);
   });
 
-  test('executes nexus_create_spec, nexus_approve_spec, and nexus_verify_spec lifecycle', async () => {
+  test('executes nexus_create_spec, anti-self-approval gate, and nexus_verify_spec lifecycle', async () => {
     // 1. Create a spec
     const createRes = await client.call('tools/call', {
       name: 'nexus_create_spec',
@@ -169,22 +170,24 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.equal(verifyDraft.status, 'UNAPPROVED');
     assert.equal(verifyDraft.valid, false);
 
-    // 3. Approve spec
-    const approveRes = await client.call('tools/call', {
+    // 3. AI calling nexus_approve_spec MUST FAIL (Anti-Self-Approval gate)
+    const approveAiRes = await client.call('tools/call', {
       name: 'nexus_approve_spec',
       arguments: {
         specPath: createData.filePath,
-        by: 'Alice Lead'
+        by: 'AI Bot'
       }
     }, 32);
+    assert.equal(approveAiRes.result.isError, true);
+    assert.match(approveAiRes.result.content[0].text, /AI Self-Approval is prohibited/i);
 
-    const approveData = JSON.parse(approveRes.result.content[0].text);
-    assert.equal(approveData.success, true);
+    // 4. Human approves spec via CLI / approveSpec
+    const approveData = approveSpec(createData.filePath, { by: 'Alice Lead' });
     assert.equal(approveData.status, 'Approved');
     assert.equal(approveData.approvedBy, 'Alice Lead');
     assert.ok(approveData.hash.startsWith('sha256:'));
 
-    // 4. Verify spec after approval (should be VALID)
+    // 5. Verify spec after approval (should be VALID)
     const verifyValidRes = await client.call('tools/call', {
       name: 'nexus_verify_spec',
       arguments: {
@@ -330,23 +333,36 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.match(badJsonRes.error.message, /Parse error/);
   });
 
-  test('createSpecDraft blocks path traversal and approveSpec validates .md extension', async () => {
+  test('createSpecDraft non-overwrite protection and path traversal bounds', async () => {
     // 1. Path traversal attempt in ID
     assert.throws(
       () => createSpecDraft({ id: '../../hack', title: 'Malicious', targetDir: tmpDir }),
       /Directory traversal detected|must contain at least one/
     );
 
-    // 2. Reject non-markdown file in approve_spec
-    const fakePkg = path.join(tmpDir, 'package.json');
+    // 2. Non-overwrite safety (AC-2)
+    const draft1 = createSpecDraft({ id: '020', title: 'Payment Gateway', targetDir: tmpDir });
+    assert.ok(fs.existsSync(draft1.filePath));
+
+    // Calling again without force: true MUST THROW
+    assert.throws(
+      () => createSpecDraft({ id: '020', title: 'Payment Gateway', targetDir: tmpDir }),
+      /Specification file already exists: 020-payment-gateway-spec.md\. Pass force: true to overwrite/
+    );
+
+    // Calling with force: true succeeds
+    const draftForced = createSpecDraft({ id: '020', title: 'Payment Gateway', targetDir: tmpDir, force: true });
+    assert.equal(draftForced.success, true);
+
+    // 3. AI calling nexus_approve_spec is rejected with FORBIDDEN error
     const approveBad = await client.call('tools/call', {
       name: 'nexus_approve_spec',
-      arguments: { specPath: fakePkg }
+      arguments: { specPath: draft1.filePath }
     }, 90);
 
     assert.equal(approveBad.id, 90);
     assert.equal(approveBad.result.isError, true);
-    assert.match(approveBad.result.content[0].text, /must be a markdown specification/i);
+    assert.match(approveBad.result.content[0].text, /AI Self-Approval is prohibited/i);
   });
 });
 

@@ -174,8 +174,8 @@ Nexus Kit v2.0+ tích hợp sẵn máy chủ MCP chuẩn công nghiệp không p
   - `nexus_get_specs`: Truy xuất danh sách task specs, trạng thái và tỷ lệ hoàn thành AC.
   - `nexus_verify_spec`: Kiểm tra chữ ký số SHA-256 chống trôi dạt yêu cầu.
   - `nexus_doctor`: Chẩn đoán toàn diện sức khỏe hệ sinh thái dự án.
-  - `nexus_create_spec`: Tự động tạo bản thảo task spec đúng chuẩn Spec Kit.
-  - `nexus_approve_spec`: Cổng phê duyệt của con người đóng dấu mã băm SHA-256.
+  - `nexus_create_spec`: Tự động tạo bản thảo task spec với tính năng bảo vệ chống ghi đè (`force: false` mặc định).
+  > **Lưu ý về Cổng Phê Duyệt Con Người**: `nexus_approve_spec` cố tình KHÔNG mở cho AI qua MCP để ngăn AI tự biên tự diễn (tự approve spec). Việc phê duyệt đặc tả là quyền hành độc quyền của con người thông qua terminal CLI (`nexus-kit --approve <spec-file>`).
 - **Tài nguyên (Resources)**: `nexus://constitution`, `nexus://specs`, `nexus://board`
 - **Prompts chuẩn**: `sdd_plan`, `sdd_implement`, `sdd_verify`
 

@@ -261,7 +261,7 @@ test('AC-2: throws TypeError on non-string inputs', () => {
     spawnSync('git', ['add', '.specify/tasks/001-feature-spec.md'], { cwd: projectDir });
     const commitApproved = spawnSync('git', ['commit', '-m', 'feat: properly specified feature'], { cwd: projectDir, encoding: 'utf8' });
     assert.equal(commitApproved.status, 0, `Commit failed: ${commitApproved.stderr}\n${commitApproved.stdout}`);
-    assert.match(commitApproved.stdout + commitApproved.stderr, /Verified 1 approved spec/);
+    assert.match(commitApproved.stdout + commitApproved.stderr, /Verified 1 staged file\(s\) across 1 approved spec/);
 
     // 7. Tamper with spec (requirement drift) -> Pre-commit hook MUST BLOCK
     fs.appendFileSync(path.join(projectDir, '.specify/tasks/001-feature-spec.md'), '\nExtra sneaky requirement\n');
@@ -271,5 +271,28 @@ test('AC-2: throws TypeError on non-string inputs', () => {
     const commitDrifted = spawnSync('git', ['commit', '-m', 'feat: should fail on drift'], { cwd: projectDir, encoding: 'utf8' });
     assert.notEqual(commitDrifted.status, 0, 'Commit should be blocked when spec is drifted');
     assert.match(commitDrifted.stderr + commitDrifted.stdout, /drift detected/i);
+
+    // 8. Scoped Target Path Gate (AC-4):
+    // Re-approve the spec so drift is cleared
+    const reapprove = spawnSync(process.execPath, [CLI_PATH, '--approve', '.specify/tasks/001-feature-spec.md'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(reapprove.status, 0);
+    spawnSync('git', ['add', '.specify/tasks/001-feature-spec.md'], { cwd: projectDir });
+
+    // Stage an UNCOVERED file in src/ (spec only covers src/unauthorized.js, not src/secret_backdoor.js)
+    fs.writeFileSync(path.join(projectDir, 'src/secret_backdoor.js'), 'export const backdoor = true;', 'utf8');
+    spawnSync('git', ['add', 'src/secret_backdoor.js'], { cwd: projectDir });
+
+    const commitUncovered = spawnSync('git', ['commit', '-m', 'feat: sneak uncovered file'], { cwd: projectDir, encoding: 'utf8' });
+    assert.notEqual(commitUncovered.status, 0, 'Commit should be blocked when staged file in src/ is not covered by Target Path');
+    assert.match(commitUncovered.stderr + commitUncovered.stdout, /NOT covered by any approved specification Target Path/i);
+    assert.match(commitUncovered.stderr + commitUncovered.stdout, /src\/secret_backdoor\.js/);
+
+    // Unstage the uncovered file -> Commit of covered file succeeds!
+    spawnSync('git', ['rm', '--cached', 'src/secret_backdoor.js'], { cwd: projectDir });
+    fs.rmSync(path.join(projectDir, 'src/secret_backdoor.js'));
+
+    const commitScopedSuccess = spawnSync('git', ['commit', '-m', 'feat: scoped commit succeeds'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(commitScopedSuccess.status, 0, `Commit failed: ${commitScopedSuccess.stderr}\n${commitScopedSuccess.stdout}`);
+    assert.match(commitScopedSuccess.stdout + commitScopedSuccess.stderr, /Verified 1 staged file/);
   });
 });
