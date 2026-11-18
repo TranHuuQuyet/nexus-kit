@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-11-18
+
+### Added
+- **Auto Status Board in Chat Across All AI IDEs & Agents (`SPEC-012`)**:
+  - Updated all 3 SDD Skills (`sdd-planner`, `sdd-coder`, `sdd-verifier`) and all 6 IDE adapters (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, `.github/copilot-instructions.md`, `.windsurfrules`, `.clinerules`) with a deterministic 3-tier Spec Status Board reporting rule:
+    1. Prefer MCP resource `nexus://board` if connected.
+    2. Otherwise run `nexus-kit board` / `npx create-nexus-kit board`.
+    3. Offline/sandbox fallback: read `.specify/tasks/*-spec.md` and render a Markdown Status Board table.
+  - Updated MCP workflow prompts (`sdd_plan`, `sdd_implement`, `sdd_verify`) in `lib/mcp.js` to include Status Board reporting.
+  - Synchronized `install.sh` and root repository templates 100% with `lib/templates.js`.
+
+---
+
 ## [2.1.1] - 2026-11-18
 
 ### Fixed

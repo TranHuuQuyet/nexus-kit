@@ -709,4 +709,37 @@ describe('Bug Fixes, Parser Alignment & Install Script Parity (v2.1.1)', () => {
     assert.match(hookContent, /driftedSpecs/);
     assert.match(hookContent, /NOT covered by any approved specification Target Path/);
   });
+
+  test('Auto Status Board in Chat directive is enforced across all 3 skills, 6 IDE adapters, and install.sh (v2.2.0)', () => {
+    const cliDir = path.join(tmpDir, 'cli-out');
+    const shDir = path.join(tmpDir, 'sh-out');
+    fs.mkdirSync(cliDir, { recursive: true });
+    fs.mkdirSync(shDir, { recursive: true });
+
+    scaffoldProject(cliDir);
+    execFileSync('bash', [INSTALL_SH_PATH, shDir], { stdio: 'pipe' });
+
+    const targets = [
+      '.agents/skills/sdd-planner/SKILL.md',
+      '.agents/skills/sdd-coder/SKILL.md',
+      '.agents/skills/sdd-verifier/SKILL.md',
+      'AGENTS.md',
+      'CLAUDE.md',
+      '.cursor/rules/nexus-kit.mdc',
+      '.github/copilot-instructions.md',
+      '.windsurfrules',
+      '.clinerules'
+    ];
+
+    for (const rel of targets) {
+      const cliContent = fs.readFileSync(path.join(cliDir, rel), 'utf8').replace(/\r\n/g, '\n');
+      const shContent = fs.readFileSync(path.join(shDir, rel), 'utf8').replace(/\r\n/g, '\n');
+
+      assert.match(cliContent, /Spec Status Board/i, `${rel} missing Spec Status Board directive`);
+      assert.match(cliContent, /nexus:\/\/board/, `${rel} missing MCP nexus://board tier`);
+      assert.match(cliContent, /nexus-kit board/, `${rel} missing CLI nexus-kit board tier`);
+      assert.match(cliContent, /Markdown/i, `${rel} missing offline Markdown fallback tier`);
+      assert.equal(shContent, cliContent, `install.sh drifted from templates.js for ${rel}`);
+    }
+  });
 });

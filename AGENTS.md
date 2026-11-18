@@ -9,3 +9,4 @@ This workspace operates under **Nexus Kit** (Spec-Driven Development).
    - **Planning**: Use `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md` to draft specs into `.specify/tasks/`. Wait for human approval before coding.
    - **Coding**: Use `.agents/skills/sdd-coder/SKILL.md` to implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Use `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).

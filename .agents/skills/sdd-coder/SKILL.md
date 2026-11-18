@@ -25,4 +25,4 @@ Trigger this skill when the user asks to implement code or complete a task that 
 4. **Automated Test Verification**:
    - Write unit/integration tests verifying the happy path and every negative/edge case defined in the spec.
    - Run the test suite and ensure all tests pass with zero warnings.
-5. **Handover to Verifier**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion.
+5. **Handover to Verifier & Status Board**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion, and include the updated **Spec Status Board** in your chat report (via MCP `nexus://board`, CLI `nexus-kit board`, or Markdown fallback table from `.specify/tasks/`).

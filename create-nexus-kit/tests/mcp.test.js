@@ -283,12 +283,22 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.equal(planRes.id, 71);
     assert.match(planRes.result.messages[0].content.text, /OAuth/);
     assert.match(planRes.result.messages[0].content.text, /sdd-planner/);
+    assert.match(planRes.result.messages[0].content.text, /nexus:\/\/board/);
+    assert.match(planRes.result.messages[0].content.text, /nexus-kit board/);
 
     // Get sdd_implement
     const implRes = await client.call('prompts/get', { name: 'sdd_implement', arguments: { specId: '001' } }, 72);
     assert.equal(implRes.id, 72);
     assert.match(implRes.result.messages[0].content.text, /001/);
     assert.match(implRes.result.messages[0].content.text, /sdd-coder/);
+    assert.match(implRes.result.messages[0].content.text, /nexus:\/\/board/);
+
+    // Get sdd_verify
+    const verifyRes = await client.call('prompts/get', { name: 'sdd_verify', arguments: { specId: '001' } }, 73);
+    assert.equal(verifyRes.id, 73);
+    assert.match(verifyRes.result.messages[0].content.text, /sdd-verifier/);
+    assert.match(verifyRes.result.messages[0].content.text, /Spec Status Board/);
+    assert.match(verifyRes.result.messages[0].content.text, /nexus:\/\/board/);
   });
 
   test('handles JSON-RPC protocol edge cases and errors gracefully', async () => {

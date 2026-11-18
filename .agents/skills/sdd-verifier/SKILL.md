@@ -23,6 +23,7 @@ Trigger this skill immediately after `sdd-coder` finishes implementing code, bef
    - Audit code against `.specify/constitution.md`: verify explicit types (no `any`), structured validation (no loose string parsing), and proper error handling.
 4. **Run Automated Gates**:
    - Execute project tests, type checks, linters, and `npx create-nexus-kit --doctor` directly in the terminal and observe full outputs.
-5. **Finalize & Emit Verification Report**:
+5. **Finalize, Emit Verification Report & Status Board**:
    - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
    - Only if all checks pass: mark ACs as `- [x]` and update `Status` to `Completed`. Otherwise block completion and hand specific remediation items back to `sdd-coder`.
+   - Always conclude your response by displaying the live **Spec Status Board** in chat: prefer MCP resource `nexus://board`, otherwise run `nexus-kit board` / `npx create-nexus-kit board`, or if offline/sandboxed render a Markdown table (`ID | Ver | Status | Integrity | Criteria | Progress | Title`) directly from `.specify/tasks/`.

@@ -28,5 +28,5 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
 6. **Version & Save Specification**:
    - Set `Status: Draft` (or `In Review` for changes), `Version: 1.0.0` (or bumped semantic version), and `Approved-Hash: Pending`.
    - Save into `.specify/tasks/` with an incrementing numeric prefix and descriptive kebab-case name (e.g., `002-feature-name-spec.md`).
-7. **Human Approval Gate**:
-   - Present a summary of the spec and instruct the user to approve it (e.g., by running `npx create-nexus-kit --approve .specify/tasks/<file>.md`) before `sdd-coder` is permitted to execute.
+7. **Human Approval Gate & Status Board**:
+   - Present a summary of the spec, instruct the user to approve it (e.g., by running `npx create-nexus-kit --approve .specify/tasks/<file>.md`) before `sdd-coder` is permitted to execute, and display the current **Spec Status Board** in your response (read MCP `nexus://board`, or run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table `ID | Ver | Status | Integrity | Criteria | Progress | Title` directly from `.specify/tasks/` if offline).

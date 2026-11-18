@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '2.1.1';
+export const VERSION = '2.2.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',

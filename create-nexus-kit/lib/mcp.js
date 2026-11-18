@@ -477,7 +477,7 @@ export function handlePromptGet(name, args = {}) {
             role: 'user',
             content: {
               type: 'text',
-              text: `You are sdd-planner in Nexus Kit${titleHint}.\n\nFollow .agents/skills/sdd-planner/SKILL.md:\n1. Read .specify/constitution.md.\n2. Use .specify/templates/spec-template.md.\n3. Partition into strict In-Scope and Out-of-Scope boundaries.\n4. Define explicit Domain Models and Mermaid sequence diagrams.\n5. Enumerate Edge Cases and Acceptance Criteria.\n6. Save draft in .specify/tasks/ and require human approval before coding.`
+              text: `You are sdd-planner in Nexus Kit${titleHint}.\n\nFollow .agents/skills/sdd-planner/SKILL.md:\n1. Read .specify/constitution.md.\n2. Use .specify/templates/spec-template.md.\n3. Partition into strict In-Scope and Out-of-Scope boundaries.\n4. Define explicit Domain Models and Mermaid sequence diagrams.\n5. Enumerate Edge Cases and Acceptance Criteria.\n6. Save draft in .specify/tasks/ and require human approval before coding.\n7. Display the current Spec Status Board in your response (read nexus://board, run nexus-kit board, or render a Markdown table from .specify/tasks/).`
             }
           }
         ]
@@ -493,7 +493,7 @@ export function handlePromptGet(name, args = {}) {
             role: 'user',
             content: {
               type: 'text',
-              text: `You are sdd-coder in Nexus Kit implementing spec: ${specHint}.\n\nFollow .agents/skills/sdd-coder/SKILL.md:\n1. Verify spec status is Approved and cryptographic hash is VALID using nexus_verify_spec.\n2. Implement code strictly within In-Scope boundaries in src/.\n3. Handle every documented Edge Case.\n4. Write tests and run npm test to ensure 100% pass.\n5. Never vibe code!`
+              text: `You are sdd-coder in Nexus Kit implementing spec: ${specHint}.\n\nFollow .agents/skills/sdd-coder/SKILL.md:\n1. Verify spec status is Approved and cryptographic hash is VALID using nexus_verify_spec.\n2. Implement code strictly within In-Scope boundaries in src/.\n3. Handle every documented Edge Case.\n4. Write tests and run npm test to ensure 100% pass.\n5. Never vibe code!\n6. Display the updated Spec Status Board in your response (read nexus://board, run nexus-kit board, or render a Markdown table from .specify/tasks/).`
             }
           }
         ]
@@ -509,7 +509,7 @@ export function handlePromptGet(name, args = {}) {
             role: 'user',
             content: {
               type: 'text',
-              text: `You are sdd-verifier in Nexus Kit auditing spec: ${specHint}.\n\nFollow .agents/skills/sdd-verifier/SKILL.md:\n1. Verify spec hash integrity with nexus_verify_spec.\n2. Trace implementation against every single Acceptance Criteria.\n3. Run nexus_doctor and automated test suite.\n4. Mark ACs [x] and bump status to Completed only when 100% compliant.`
+              text: `You are sdd-verifier in Nexus Kit auditing spec: ${specHint}.\n\nFollow .agents/skills/sdd-verifier/SKILL.md:\n1. Verify spec hash integrity with nexus_verify_spec.\n2. Trace implementation against every single Acceptance Criteria.\n3. Run nexus_doctor and automated test suite.\n4. Mark ACs [x] and bump status to Completed only when 100% compliant.\n5. Conclude by displaying the live Spec Status Board in chat (read nexus://board, run nexus-kit board, or render a Markdown table from .specify/tasks/).`
             }
           }
         ]

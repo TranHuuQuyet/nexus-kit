@@ -14,3 +14,4 @@ This repository uses **Nexus Kit**. You must enforce these rules on every intera
    - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`, clarify requirements, and save the spec into `.specify/tasks/`. Wait for human approval before coding.
    - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
+4. **SHOW SPEC STATUS BOARD**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).

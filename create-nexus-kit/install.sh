@@ -256,8 +256,8 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
 6. **Version & Save Specification**:
    - Set `Status: Draft` (or `In Review` for changes), `Version: 1.0.0` (or bumped semantic version), and `Approved-Hash: Pending`.
    - Save into `.specify/tasks/` with an incrementing numeric prefix and descriptive kebab-case name (e.g., `002-feature-name-spec.md`).
-7. **Human Approval Gate**:
-   - Present a summary of the spec and instruct the user to approve it (e.g., by running `npx create-nexus-kit --approve .specify/tasks/<file>.md`) before `sdd-coder` is permitted to execute.
+7. **Human Approval Gate & Status Board**:
+   - Present a summary of the spec, instruct the user to approve it (e.g., by running `npx create-nexus-kit --approve .specify/tasks/<file>.md`) before `sdd-coder` is permitted to execute, and display the current **Spec Status Board** in your response (read MCP `nexus://board`, or run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table `ID | Ver | Status | Integrity | Criteria | Progress | Title` directly from `.specify/tasks/` if offline).
 EOF
 
 safe_write ".agents/skills/sdd-coder/SKILL.md" << 'EOF'
@@ -288,7 +288,7 @@ Trigger this skill when the user asks to implement code or complete a task that 
 4. **Automated Test Verification**:
    - Write unit/integration tests verifying the happy path and every negative/edge case defined in the spec.
    - Run the test suite and ensure all tests pass with zero warnings.
-5. **Handover to Verifier**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion.
+5. **Handover to Verifier & Status Board**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion, and include the updated **Spec Status Board** in your chat report (via MCP `nexus://board`, CLI `nexus-kit board`, or Markdown fallback table from `.specify/tasks/`).
 EOF
 
 safe_write ".agents/skills/sdd-verifier/SKILL.md" << 'EOF'
@@ -316,10 +316,11 @@ Trigger this skill immediately after `sdd-coder` finishes implementing code, bef
 3. **Constitution Compliance Check**:
    - Audit code against `.specify/constitution.md`: verify explicit types (no `any`), structured validation (no loose string parsing), and proper error handling.
 4. **Run Automated Gates**:
-   - Execute project tests, type checks, and linters directly in the terminal and observe full outputs.
-5. **Finalize & Emit Verification Report**:
+   - Execute project tests, type checks, linters, and `npx create-nexus-kit --doctor` directly in the terminal and observe full outputs.
+5. **Finalize, Emit Verification Report & Status Board**:
    - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
    - Only if all checks pass: mark ACs as `- [x]` and update `Status` to `Completed`. Otherwise block completion and hand specific remediation items back to `sdd-coder`.
+   - Always conclude your response by displaying the live **Spec Status Board** in chat: prefer MCP resource `nexus://board`, otherwise run `nexus-kit board` / `npx create-nexus-kit board`, or if offline/sandboxed render a Markdown table (`ID | Ver | Status | Integrity | Criteria | Progress | Title`) directly from `.specify/tasks/`.
 EOF
 
 safe_write "AGENTS.md" << 'EOF'
@@ -334,6 +335,7 @@ This workspace operates under **Nexus Kit** (Spec-Driven Development).
    - **Planning**: Use `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md` to draft specs into `.specify/tasks/`. Wait for human approval before coding.
    - **Coding**: Use `.agents/skills/sdd-coder/SKILL.md` to implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Use `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
 EOF
 
 safe_write "CLAUDE.md" << 'EOF'
@@ -348,6 +350,7 @@ This project is governed by **Nexus Kit** (Spec-Driven Development).
    - Planning a feature -> Follow `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`.
    - Implementing a spec -> Follow `.agents/skills/sdd-coder/SKILL.md`.
    - Auditing implementation -> Follow `.agents/skills/sdd-verifier/SKILL.md`.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
 EOF
 
 safe_write ".cursor/rules/nexus-kit.mdc" << 'EOF'
@@ -367,6 +370,7 @@ This repository uses **Nexus Kit**. You must enforce these rules on every intera
    - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`, clarify requirements, and save the spec into `.specify/tasks/`. Wait for human approval before coding.
    - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
+4. **SHOW SPEC STATUS BOARD**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
 EOF
 
 safe_write ".github/copilot-instructions.md" << 'EOF'
@@ -381,6 +385,7 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
   - For planning/architecture: follow `.agents/skills/sdd-planner/SKILL.md` and use `.specify/templates/spec-template.md`.
   - For implementation: follow `.agents/skills/sdd-coder/SKILL.md` and stay strictly within `In-Scope` bounds.
   - For verification: follow `.agents/skills/sdd-verifier/SKILL.md` to audit against Acceptance Criteria.
+- **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
 EOF
 
 safe_write ".windsurfrules" << 'EOF'
@@ -395,6 +400,7 @@ This project is governed by **Nexus Kit** (Spec-Driven Development).
    - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`. Draft specifications into `.specify/tasks/` and wait for human approval before coding.
    - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within `In-Scope` bounds of approved specs.
    - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit implementation against all Acceptance Criteria.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
 EOF
 
 safe_write ".clinerules" << 'EOF'
@@ -409,6 +415,7 @@ This repository adheres to **Nexus Kit** (Spec-Driven Development).
    - **sdd-planner**: When asked to create or modify a feature, use `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`. Save to `.specify/tasks/` and require human approval (`--approve`).
    - **sdd-coder**: Follow `.agents/skills/sdd-coder/SKILL.md` only after verifying approval with `nexus-kit --verify-spec <spec-path>`.
    - **sdd-verifier**: Follow `.agents/skills/sdd-verifier/SKILL.md` to audit Acceptance Criteria before completing the task.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
 EOF
 
 if [ "$WITH_HOOKS" = "true" ]; then

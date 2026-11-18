@@ -9,3 +9,4 @@ This project is governed by **Nexus Kit** (Spec-Driven Development).
    - Planning a feature -> Follow `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`.
    - Implementing a spec -> Follow `.agents/skills/sdd-coder/SKILL.md`.
    - Auditing implementation -> Follow `.agents/skills/sdd-verifier/SKILL.md`.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
