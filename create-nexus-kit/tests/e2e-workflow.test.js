@@ -294,5 +294,45 @@ test('AC-2: throws TypeError on non-string inputs', () => {
     const commitScopedSuccess = spawnSync('git', ['commit', '-m', 'feat: scoped commit succeeds'], { cwd: projectDir, encoding: 'utf8' });
     assert.equal(commitScopedSuccess.status, 0, `Commit failed: ${commitScopedSuccess.stderr}\n${commitScopedSuccess.stdout}`);
     assert.match(commitScopedSuccess.stdout + commitScopedSuccess.stderr, /Verified 1 staged file/);
+
+    // 9. Multi-Value Target Path & Asterisk Checkbox Hash Alignment (SPEC-011):
+    const multiSpecPath = path.join(projectDir, '.specify/tasks/002-multi-target-spec.md');
+    fs.writeFileSync(
+      multiSpecPath,
+      '# SPEC-002: Multi Target Module\n\n> **Status:** `Draft`  \n> **Version:** `1.0.0`  \n> **Target Path:** `src/auth/`, `src/utils/helper.js`  \n\n## 5. Acceptance Criteria\n* [ ] **AC-1**: Auth and utils covered\n',
+      'utf8'
+    );
+    const approveMulti = spawnSync(process.execPath, [CLI_PATH, '--approve', '.specify/tasks/002-multi-target-spec.md'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(approveMulti.status, 0);
+
+    // Tick asterisk checkbox (* [ ] -> * [x]) — hash MUST STILL MATCH in pre-commit hook!
+    const tickedMulti = fs.readFileSync(multiSpecPath, 'utf8').replace('* [ ] **AC-1**', '* [x] **AC-1**');
+    fs.writeFileSync(multiSpecPath, tickedMulti, 'utf8');
+
+    fs.mkdirSync(path.join(projectDir, 'src/auth'), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, 'src/utils'), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'src/auth/login.js'), 'export const login = () => true;', 'utf8');
+    fs.writeFileSync(path.join(projectDir, 'src/utils/helper.js'), 'export const help = () => true;', 'utf8');
+    spawnSync('git', ['add', '.specify/tasks/002-multi-target-spec.md', 'src/auth/login.js', 'src/utils/helper.js'], { cwd: projectDir });
+
+    const commitMultiSuccess = spawnSync('git', ['commit', '-m', 'feat: multi-target path works'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(commitMultiSuccess.status, 0, `Multi-target commit failed: ${commitMultiSuccess.stderr}\n${commitMultiSuccess.stdout}`);
+    assert.match(commitMultiSuccess.stdout + commitMultiSuccess.stderr, /Verified 2 staged file/);
+
+    // 10. Wildcard Target Path (src/...) covers any file under src/
+    const wildcardSpecPath = path.join(projectDir, '.specify/tasks/003-wildcard-spec.md');
+    fs.writeFileSync(
+      wildcardSpecPath,
+      '# SPEC-003: Wildcard Coverage\n\n> **Status:** `Draft`  \n> **Version:** `1.0.0`  \n> **Target Path:** `src/...`  \n\n## 1. Overview\nCovers src.\n',
+      'utf8'
+    );
+    const approveWildcard = spawnSync(process.execPath, [CLI_PATH, '--approve', '.specify/tasks/003-wildcard-spec.md'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(approveWildcard.status, 0);
+
+    fs.writeFileSync(path.join(projectDir, 'src/anything.js'), 'export const any = 1;', 'utf8');
+    spawnSync('git', ['add', '.specify/tasks/003-wildcard-spec.md', 'src/anything.js'], { cwd: projectDir });
+
+    const commitWildcard = spawnSync('git', ['commit', '-m', 'feat: wildcard target path'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(commitWildcard.status, 0, `Wildcard commit failed: ${commitWildcard.stderr}\n${commitWildcard.stdout}`);
   });
 });

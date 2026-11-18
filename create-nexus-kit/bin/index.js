@@ -273,16 +273,15 @@ function run() {
 
   console.log(`\n${c.green}${c.bold}✔ Success! Nexus Kit scaffolding completed.${c.reset}\n`);
   console.log(`${c.bold}Next steps:${c.reset}`);
+  let step = 1;
   if (!isCurrentDir) {
-    console.log(`  1. ${c.cyan}cd ${projectName}${c.reset}`);
-    console.log(`  2. Open the project in your AI editor (Antigravity, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot)`);
-  } else {
-    console.log(`  1. Open the project in your AI editor (Antigravity, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot)`);
+    console.log(`  ${step++}. ${c.cyan}cd ${projectName}${c.reset}`);
   }
-  console.log(`  3. Update technology guidelines in ${c.cyan}.specify/constitution.md${c.reset}`);
-  console.log(`  4. Approve specs with ${c.cyan}npx create-nexus-kit --approve <spec-file>${c.reset}`);
-  console.log(`  5. Check project status board with ${c.cyan}npx create-nexus-kit board${c.reset}`);
-  console.log(`  6. Run ${c.cyan}npx create-nexus-kit --doctor${c.reset} anytime for full integrity checks\n`);
+  console.log(`  ${step++}. Open the project in your AI editor (Antigravity, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot)`);
+  console.log(`  ${step++}. Update technology guidelines in ${c.cyan}.specify/constitution.md${c.reset}`);
+  console.log(`  ${step++}. Approve specs with ${c.cyan}npx create-nexus-kit --approve <spec-file>${c.reset}`);
+  console.log(`  ${step++}. Check project status board with ${c.cyan}npx create-nexus-kit board${c.reset}`);
+  console.log(`  ${step++}. Run ${c.cyan}npx create-nexus-kit --doctor${c.reset} anytime for full integrity checks\n`);
 }
 
 run();

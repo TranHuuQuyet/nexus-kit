@@ -10,6 +10,9 @@ import {
   PRESETS,
   resolvePreset,
   parseYamlFrontmatter,
+  parseSpecMetadata,
+  computeSpecHash,
+  verifySpecForCoding,
   scaffoldProject,
   validateProject,
   installGitPreCommitHook,
@@ -563,5 +566,147 @@ describe('Security Hardening, Path Boundaries & Parser Safety (v2.1.0)', () => {
     const docWithH1 = `## Workflow\nLine 1\nLine 2\n# Overview\nLine 3`;
     const content = extractSectionContent(docWithH1, 'Workflow');
     assert.equal(content, 'Line 1\nLine 2');
+  });
+});
+
+describe('Bug Fixes, Parser Alignment & Install Script Parity (v2.1.1)', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('parseSpecMetadata handles spaced keys and preserves multi-value Target Path', () => {
+    const raw = [
+      '# SPEC-011: Multi Target',
+      '',
+      '> **Status:** `Approved`  ',
+      '> **Version:** `1.0.0`  ',
+      '> **Upstream Spec Kit:** Compatible with Spec Kit v1.0+  ',
+      '> **Target Path:** `src/auth/`, `src/utils/slugify.js`, `README.md`'
+    ].join('\n');
+
+    const meta = parseSpecMetadata(raw);
+    assert.equal(meta['Status'], 'Approved');
+    assert.equal(meta['Version'], '1.0.0');
+    assert.equal(meta['Upstream Spec Kit'], 'Compatible with Spec Kit v1.0+');
+    assert.equal(meta['Target Path'], '`src/auth/`, `src/utils/slugify.js`, `README.md`');
+
+    // Single backtick-wrapped Target Path should unwrap cleanly
+    const singleRaw = '# SPEC-012: Single\n\n> **Target Path:** `src/auth/`  \n';
+    assert.equal(parseSpecMetadata(singleRaw)['Target Path'], 'src/auth/');
+  });
+
+  test('computeSpecHash normalizes both - [x] and * [X] checkboxes and CRLF consistently', () => {
+    const baseSpec = '# SPEC-001: Hash Test\n\n> **Status:** `Draft`\n\n- [ ] **AC-1**: First\n* [ ] **AC-2**: Second\n';
+    const checkedSpec = '# SPEC-001: Hash Test\r\n\r\n> **Status:** `Completed`\r\n> **Approved-By:** `Alice`\r\n> **Approved-At:** `2026-01-01`\r\n> **Approved-Hash:** `sha256:abc`\r\n\r\n- [x] **AC-1**: First\r\n* [X] **AC-2**: Second\r\n';
+    const driftedSpec = '# SPEC-001: Hash Test\n\n> **Status:** `Approved`\n\n- [x] **AC-1**: First Modified\n* [X] **AC-2**: Second\n';
+
+    assert.equal(computeSpecHash(baseSpec), computeSpecHash(checkedSpec));
+    assert.notEqual(computeSpecHash(baseSpec), computeSpecHash(driftedSpec));
+  });
+
+  test('verifySpecForCoding validates all lifecycle states and failure paths directly', () => {
+    // 1. Missing file
+    const missing = verifySpecForCoding(path.join(tmpDir, 'nope-spec.md'));
+    assert.equal(missing.ready, false);
+    assert.match(missing.reason, /not found/i);
+
+    const tasksDir = path.join(tmpDir, '.specify/tasks');
+    fs.mkdirSync(tasksDir, { recursive: true });
+
+    // 2. Missing Status
+    const noStatusPath = path.join(tasksDir, '001-nostatus-spec.md');
+    fs.writeFileSync(noStatusPath, '# SPEC-001: No Status\n\nBody', 'utf8');
+    const noStatus = verifySpecForCoding(noStatusPath);
+    assert.equal(noStatus.ready, false);
+    assert.match(noStatus.reason, /Missing > \*\*Status:\*\*/i);
+
+    // 3. Draft status rejected
+    const specPath = path.join(tasksDir, '002-flow-spec.md');
+    fs.writeFileSync(specPath, '# SPEC-002: Flow\n\n> **Status:** `Draft`\n\n- [ ] **AC-1**: Works\n', 'utf8');
+    const draftRes = verifySpecForCoding(specPath);
+    assert.equal(draftRes.ready, false);
+    assert.match(draftRes.reason, /Draft/);
+
+    // 4. Approved without hash rejected
+    fs.writeFileSync(specPath, '# SPEC-002: Flow\n\n> **Status:** `Approved`\n> **Approved-Hash:** `Pending`\n\n- [ ] **AC-1**: Works\n', 'utf8');
+    const noHashRes = verifySpecForCoding(specPath);
+    assert.equal(noHashRes.ready, false);
+    assert.match(noHashRes.reason, /lacks cryptographic Approved-Hash/i);
+
+    // 5. Properly approved -> ready: true
+    approveSpec(specPath, { by: 'Reviewer' });
+    const approvedRes = verifySpecForCoding(specPath);
+    assert.equal(approvedRes.ready, true);
+    assert.equal(approvedRes.status, 'PASS');
+
+    // 6. Transition to In Progress -> still ready: true
+    const inProgContent = fs.readFileSync(specPath, 'utf8').replace('> **Status:** `Approved`', '> **Status:** `In Progress`');
+    fs.writeFileSync(specPath, inProgContent, 'utf8');
+    const inProgRes = verifySpecForCoding(specPath);
+    assert.equal(inProgRes.ready, true);
+
+    // 7. Tamper content -> drift rejected
+    fs.appendFileSync(specPath, '\nSneaky drift\n');
+    const driftRes = verifySpecForCoding(specPath);
+    assert.equal(driftRes.ready, false);
+    assert.match(driftRes.reason, /drift detected/i);
+  });
+
+  test('parseYamlFrontmatter strips UTF-8 BOM, preserves literal | newlines, and guards single-char quotes', () => {
+    const raw = '\uFEFF---\nname: test-skill\nliteral: |\n  line one\n  line two\nfolded: >-\n  part a\n  part b\nquote: "\n---\n# Body';
+    const parsed = parseYamlFrontmatter(raw);
+    assert.equal(parsed.valid, true);
+    assert.equal(parsed.data.name, 'test-skill');
+    assert.equal(parsed.data.literal, 'line one\nline two');
+    assert.equal(parsed.data.folded, 'part a part b');
+    assert.equal(parsed.data.quote, '"');
+  });
+
+  test('getTasksSummary counts only **AC- checkboxes when explicit ACs exist (ignoring Edge Cases)', () => {
+    scaffoldProject(tmpDir);
+    const specPath = path.join(tmpDir, '.specify/tasks/001-mixed-spec.md');
+    fs.writeFileSync(
+      specPath,
+      [
+        '# SPEC-001: Mixed Checkboxes',
+        '',
+        '> **Status:** `Draft`',
+        '> **Version:** `1.0.0`',
+        '',
+        '## 4. Edge Cases',
+        '- [ ] **Empty Input**: handle empty',
+        '- [x] **Null Input**: handle null',
+        '',
+        '## 5. Acceptance Criteria',
+        '- [x] **AC-1**: Main flow',
+        '- [ ] **AC-2**: Error flow'
+      ].join('\n'),
+      'utf8'
+    );
+
+    const summary = getTasksSummary(tmpDir);
+    assert.equal(summary.tasks.length, 1);
+    assert.equal(summary.tasks[0].acTotal, 2);
+    assert.equal(summary.tasks[0].acDone, 1);
+    assert.equal(summary.tasks[0].progressPercent, 50);
+  });
+
+  test('install.sh --with-hooks installs v2.1+ pre-commit hook with drift and Scoped Target Path checks', () => {
+    spawnSync('git', ['init'], { cwd: tmpDir });
+    execFileSync('bash', [INSTALL_SH_PATH, '.', '--with-hooks'], { cwd: tmpDir, stdio: 'pipe' });
+
+    const hookPath = path.join(tmpDir, '.git/hooks/pre-commit');
+    assert.ok(fs.existsSync(hookPath));
+    const hookContent = fs.readFileSync(hookPath, 'utf8');
+    assert.match(hookContent, /isPathCovered/);
+    assert.match(hookContent, /activeTargetPaths/);
+    assert.match(hookContent, /driftedSpecs/);
+    assert.match(hookContent, /NOT covered by any approved specification Target Path/);
   });
 });

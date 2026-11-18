@@ -325,10 +325,15 @@ if (specFiles.length === 0) {
 
 function parseMeta(content) {
   const meta = {};
-  for (const line of content.split("\\n")) {
-    const match = line.match(/^>\\s*\\*\\*([^:]+):\\*\\*\\s*[\\x60]?([^\\x60\\r\\n]+)[\\x60]?/);
+  for (const line of content.replace(/\\r\\n/g, "\\n").split("\\n")) {
+    const match = line.match(/^>\\s*\\*\\*([^:]+):\\*\\*\\s*(.+)$/);
     if (match) {
-      meta[match[1].trim()] = match[2].trim();
+      const key = match[1].trim();
+      let val = match[2].trim();
+      if (val.startsWith("\\x60") && val.endsWith("\\x60") && val.length >= 2 && val.slice(1, -1).indexOf("\\x60") === -1) {
+        val = val.slice(1, -1).trim();
+      }
+      meta[key] = val;
     }
   }
   return meta;
@@ -337,15 +342,9 @@ function parseMeta(content) {
 function computeHash(content) {
   const lines = content.replace(/\\r\\n/g, "\\n").split("\\n");
   const filtered = lines.filter(function(line) {
-    return !/^>\\s*\\*\\*(Status|Approved-By|Approved-At|Approved-Hash):\\*\\*/i.test(line);
+    return !/^>\\s*\\*\\*(?:Status|Approved-By|Approved-At|Approved-Hash):\\*\\*/i.test(line);
   });
-  const normalized = filtered.map(function(line) {
-    if (/^(\\s*[-*]\\s*\\[)[xX](\\]\\s*)/.test(line)) {
-      return line.replace(/^(\\s*[-*]\\s*\\[)[xX](\\]\\s*)/, "$1 $2");
-    }
-    return line;
-  });
-  const canonical = normalized.join("\\n").trim();
+  const canonical = filtered.join("\\n").replace(/^(\\s*[-*]\\s*)\\[[xX]\\]/gm, "$1[ ]").trim();
   const digest = crypto.createHash("sha256").update(canonical, "utf8").digest("hex");
   return "sha256:" + digest;
 }

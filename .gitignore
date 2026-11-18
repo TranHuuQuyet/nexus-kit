@@ -13,3 +13,6 @@ build/
 
 # Logs
 *.log
+
+# Local test scaffolds
+nexus-kit-app/

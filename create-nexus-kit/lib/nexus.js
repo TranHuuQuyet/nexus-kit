@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '2.1.0';
+export const VERSION = '2.1.1';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -24,7 +24,7 @@ import { TEMPLATES } from './templates.js';
  * Strictly parses YAML frontmatter at the start of a Markdown document.
  */
 export function parseYamlFrontmatter(rawContent) {
-  const normalized = rawContent.replace(/\r\n/g, '\n');
+  const normalized = rawContent.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   if (!normalized.startsWith('---\n')) {
     return { valid: false, error: 'Missing opening YAML frontmatter delimiter (---)' };
   }
@@ -59,16 +59,20 @@ export function parseYamlFrontmatter(rawContent) {
 
     if (val === '>-' || val === '>' || val === '|-' || val === '|') {
       const multilineParts = [];
+      const isLiteral = val === '|' || val === '|-';
       while (i + 1 < lines.length && (lines[i + 1].startsWith('  ') || lines[i + 1].trim() === '')) {
         i++;
         multilineParts.push(lines[i].trim());
       }
-      data[key] = multilineParts.join(' ').trim();
+      data[key] = multilineParts.join(isLiteral ? '\n' : ' ').trim();
     } else if (val === 'true') {
       data[key] = true;
     } else if (val === 'false') {
       data[key] = false;
-    } else if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+    } else if (
+      val.length >= 2 &&
+      ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'")))
+    ) {
       data[key] = val.slice(1, -1);
     } else {
       data[key] = val;
@@ -116,11 +120,11 @@ export function parseSpecMetadata(rawMarkdown) {
   const meta = {};
 
   for (const line of lines) {
-    const match = line.match(/^>\s*\*\*([A-Za-z-]+):\*\*\s*(.+)$/);
+    const match = line.match(/^>\s*\*\*([^:]+):\*\*\s*(.+)$/);
     if (match) {
       const key = match[1].trim();
       let val = match[2].trim();
-      if (val.startsWith('`') && val.endsWith('`') && val.length >= 2) {
+      if (val.startsWith('`') && val.endsWith('`') && val.length >= 2 && !val.slice(1, -1).includes('`')) {
         val = val.slice(1, -1).trim();
       }
       meta[key] = val;
@@ -143,7 +147,7 @@ export function computeSpecHash(rawMarkdown) {
   );
   const canonical = filteredLines
     .join('\n')
-    .replace(/^(\s*-\s*)\[[xX]\]/gm, '$1[ ]')
+    .replace(/^(\s*[-*]\s*)\[[xX]\]/gm, '$1[ ]')
     .trim();
 
   const digest = crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
@@ -489,16 +493,12 @@ export function getTasksSummary(targetDir) {
     }
 
     const lines = raw.split('\n');
-    let acTotal = 0;
-    let acDone = 0;
-    for (const l of lines) {
-      if (/^\s*[-*]\s*\[[xX]\]\s*\*\*AC-/.test(l) || /^\s*[-*]\s*\[[xX]\]/.test(l)) {
-        acTotal++;
-        acDone++;
-      } else if (/^\s*[-*]\s*\[ \]\s*\*\*AC-/.test(l) || /^\s*[-*]\s*\[ \]/.test(l)) {
-        acTotal++;
-      }
-    }
+    const explicitAcLines = lines.filter((l) => /^\s*[-*]\s*\[[xX ]\]\s*\*\*AC-/.test(l));
+    const targetLines = explicitAcLines.length > 0
+      ? explicitAcLines
+      : lines.filter((l) => /^\s*[-*]\s*\[[xX ]\]/.test(l));
+    const acTotal = targetLines.length;
+    const acDone = targetLines.filter((l) => /^\s*[-*]\s*\[[xX]\]/.test(l)).length;
 
     const progressPercent = acTotal > 0 ? Math.round((acDone / acTotal) * 100) : (status === 'Completed' ? 100 : 0);
 
@@ -689,7 +689,7 @@ export function validateProject(targetDir) {
         }
 
         if (status === 'Completed') {
-          const acMatches = raw.match(/^\s*-\s*\[\s*\]\s*\*\*AC-/gm);
+          const acMatches = raw.match(/^\s*[-*]\s*\[\s*\]\s*\*\*AC-/gm);
           if (acMatches && acMatches.length > 0) {
             addResult('FAIL', `spec:${specFile}`, `${specFile}: Status is 'Completed' while ${acMatches.length} Acceptance Criteria remain unchecked (- [ ])`);
             continue;

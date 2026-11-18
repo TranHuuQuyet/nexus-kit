@@ -84,8 +84,10 @@ describe('Model Context Protocol (MCP) Server', () => {
   });
 
   afterEach(() => {
-    client.close();
-    server.close();
+    try { client.close(); } catch {}
+    try { server.close(); } catch {}
+    stdin.destroy();
+    stdout.destroy();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -363,6 +365,52 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.equal(approveBad.id, 90);
     assert.equal(approveBad.result.isError, true);
     assert.match(approveBad.result.content[0].text, /AI Self-Approval is prohibited/i);
+
+    // 4. MCP nexus_create_spec rejects duplicate without force and succeeds with force: true
+    const mcpDupRes = await client.call('tools/call', {
+      name: 'nexus_create_spec',
+      arguments: { id: '020', title: 'Payment Gateway' }
+    }, 91);
+    assert.equal(mcpDupRes.result.isError, true);
+    assert.match(mcpDupRes.result.content[0].text, /already exists/i);
+
+    const mcpForceRes = await client.call('tools/call', {
+      name: 'nexus_create_spec',
+      arguments: { id: '020', title: 'Payment Gateway', force: true }
+    }, 92);
+    assert.ok(!mcpForceRes.result.isError);
+    const mcpForceData = JSON.parse(mcpForceRes.result.content[0].text);
+    assert.equal(mcpForceData.success, true);
+  });
+
+  test('nexus_verify_spec validates In Progress specs consistently with CLI (v2.1.1)', async () => {
+    const draft = createSpecDraft({ id: '030', title: 'In Progress Feature', targetDir: tmpDir });
+    approveSpec(draft.filePath, { by: 'Lead' });
+
+    // Transition status to In Progress
+    const updated = fs.readFileSync(draft.filePath, 'utf8').replace('> **Status:** `Approved`', '> **Status:** `In Progress`');
+    fs.writeFileSync(draft.filePath, updated, 'utf8');
+
+    const verifyValidRes = await client.call('tools/call', {
+      name: 'nexus_verify_spec',
+      arguments: { specPath: draft.filePath }
+    }, 95);
+    const verifyValid = JSON.parse(verifyValidRes.result.content[0].text);
+    assert.equal(verifyValid.status, 'VALID');
+    assert.equal(verifyValid.specStatus, 'In Progress');
+    assert.equal(verifyValid.valid, true);
+    assert.equal(verifyValidRes.result.isError, false);
+
+    // Tamper while In Progress -> DRIFTED
+    fs.appendFileSync(draft.filePath, '\nUnapproved change during implementation\n');
+    const verifyDriftRes = await client.call('tools/call', {
+      name: 'nexus_verify_spec',
+      arguments: { specPath: draft.filePath }
+    }, 96);
+    const verifyDrift = JSON.parse(verifyDriftRes.result.content[0].text);
+    assert.equal(verifyDrift.status, 'DRIFTED');
+    assert.equal(verifyDrift.valid, false);
+    assert.equal(verifyDriftRes.result.isError, true);
   });
 });
 
@@ -384,8 +432,14 @@ describe('CLI mcp subcommand', () => {
     });
 
     const rl = readline.createInterface({ input: child.stdout, terminal: false });
+    const timer = setTimeout(() => {
+      rl.close();
+      child.kill('SIGKILL');
+      done(new Error('MCP stdio process timed out after 5000ms'));
+    }, 5000);
 
     rl.on('line', (line) => {
+      clearTimeout(timer);
       const res = JSON.parse(line);
       assert.equal(res.id, 999);
       assert.equal(res.result.protocolVersion, '2024-11-05');

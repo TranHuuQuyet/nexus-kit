@@ -318,7 +318,7 @@ export function handleToolCall(name, args = {}, context = {}) {
           };
         }
 
-        if (status === 'Approved' || status === 'Completed') {
+        if (status === 'Approved' || status === 'Completed' || status === 'In Progress') {
           const isMatch = approvedHash === currentHash;
           return {
             content: [
