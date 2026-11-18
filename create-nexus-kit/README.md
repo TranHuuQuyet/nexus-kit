@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/create-nexus-kit"><img src="https://img.shields.io/npm/v/create-nexus-kit.svg" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/create-nexus-kit"><img src="https://img.shields.io/npm/dt/create-nexus-kit.svg" alt="npm downloads" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen" alt="Node.js Version" /></a>
   <a href="package.json"><img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies" /></a>
