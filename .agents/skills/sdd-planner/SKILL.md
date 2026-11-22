@@ -14,14 +14,17 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
 
 ## Workflow
 1. **Read Constitution**: ALWAYS read `.specify/constitution.md` first to verify tech stack constraints, typing rules, and quality gates.
-2. **Load Spec Kit Blueprint**: Read `.specify/templates/spec-template.md` as the mandatory structural template.
-3. **Clarifying Interview & Assumptions**:
+2. **Pre-flight Codebase Inspection & Blueprint**:
+   - Inspect existing domain models, utilities, and libraries in the workspace to reuse existing contracts and prevent duplicate code.
+   - Read `.specify/templates/spec-template.md` as the mandatory structural template.
+3. **Socratic Clarifying Probing & Assumptions**:
    - Surface hidden assumptions immediately (e.g., auth mechanism, storage engine, validation library).
-   - If the request is underspecified, ask concise clarifying questions one at a time until requirements are concrete.
+   - If the request is underspecified or architectural choices exist, perform **Socratic Clarifying Probing**: ask concise questions offering concrete options (e.g. `[Option A: ...]`, `[Option B: ...]`, `[Option C: ...]`) so the user can resolve ambiguity before drafting.
 4. **Enforce Strict Scope Lock**:
    - Partition capabilities into **In-Scope** (explicitly required) and **Out-of-Scope** (explicitly excluded to prevent AI scope creep).
-5. **Author Deterministic Contracts**:
+5. **Author Deterministic Contracts & NFRs**:
    - Define explicit Domain Models / Schemas (TypeScript interfaces, Zod/JSON schemas, error types).
+   - Specify Non-Functional Requirements (NFRs: latency budgets, security/OWASP constraints, backward compatibility/migrations).
    - Map Logic Flows & State Transitions using Mermaid diagrams.
    - Enumerate Edge Cases (null/empty input, network timeout, idempotency, boundary limits).
    - Assign verifiable Acceptance Criteria IDs (`AC-1`, `AC-2`, etc.).

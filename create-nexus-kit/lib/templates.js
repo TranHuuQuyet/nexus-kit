@@ -53,6 +53,11 @@ export interface EntityModel {
 - **Output / Return Type:**
 - **Failure Responses:**
 
+### 2.3 Non-Functional Requirements (NFRs)
+- **Performance Budget:** [e.g. latency < 200ms, bundle size impact < 5KB]
+- **Security & Privacy:** [e.g. input sanitization, zero plain-text secrets, OWASP compliance]
+- **Backward Compatibility & Migrations:** [e.g. non-breaking changes, migration steps]
+
 ---
 
 ## 3. Logic Flow & State Transitions
@@ -109,14 +114,17 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
 
 ## Workflow
 1. **Read Constitution**: ALWAYS read \`.specify/constitution.md\` first to verify tech stack constraints, typing rules, and quality gates.
-2. **Load Spec Kit Blueprint**: Read \`.specify/templates/spec-template.md\` as the mandatory structural template.
-3. **Clarifying Interview & Assumptions**:
+2. **Pre-flight Codebase Inspection & Blueprint**:
+   - Inspect existing domain models, utilities, and libraries in the workspace to reuse existing contracts and prevent duplicate code.
+   - Read \`.specify/templates/spec-template.md\` as the mandatory structural template.
+3. **Socratic Clarifying Probing & Assumptions**:
    - Surface hidden assumptions immediately (e.g., auth mechanism, storage engine, validation library).
-   - If the request is underspecified, ask concise clarifying questions one at a time until requirements are concrete.
+   - If the request is underspecified or architectural choices exist, perform **Socratic Clarifying Probing**: ask concise questions offering concrete options (e.g. \`[Option A: ...]\`, \`[Option B: ...]\`, \`[Option C: ...]\`) so the user can resolve ambiguity before drafting.
 4. **Enforce Strict Scope Lock**:
    - Partition capabilities into **In-Scope** (explicitly required) and **Out-of-Scope** (explicitly excluded to prevent AI scope creep).
-5. **Author Deterministic Contracts**:
+5. **Author Deterministic Contracts & NFRs**:
    - Define explicit Domain Models / Schemas (TypeScript interfaces, Zod/JSON schemas, error types).
+   - Specify Non-Functional Requirements (NFRs: latency budgets, security/OWASP constraints, backward compatibility/migrations).
    - Map Logic Flows & State Transitions using Mermaid diagrams.
    - Enumerate Edge Cases (null/empty input, network timeout, idempotency, boundary limits).
    - Assign verifiable Acceptance Criteria IDs (\`AC-1\`, \`AC-2\`, etc.).
@@ -141,19 +149,27 @@ Trigger this skill when the user asks to implement code or complete a task that 
 - **APPROVAL & DRIFT GATE**: NEVER implement a spec whose \`Status\` is \`Draft\`, \`In Review\`, or \`Superseded\`, or whose \`Approved-Hash\` fails integrity verification (\`npx create-nexus-kit --verify-spec <spec-path>\`). If requirements changed after approval, stop and require human re-approval first.
 - **ZERO SCOPE CREEP**: Implement ONLY items explicitly defined in the spec's \`In-Scope\` section. Never touch unrelated files or perform unsolicited refactoring.
 - **NO HALLUCINATED DEPENDENCIES**: Never install third-party packages not authorized in the spec or \`.specify/constitution.md\`.
+- **BOUNDED SELF-HEALING & NO FAKE PASSES**: Never lower the quality bar to force tests to pass (never delete tests, comment out assertions, or replace checks with trivial assertions). Auto-remediation is bounded to a maximum of 3 iterations; if unresolved, halt and escalate.
 
 ## Workflow
 1. **Verify Approval & Integrity Gate**:
    - Read the target specification in \`.specify/tasks/\` completely.
    - Verify \`Status\` is \`Approved\` or \`In Progress\`.
    - Run \`npx create-nexus-kit --verify-spec .specify/tasks/<spec-file>.md\` (or verify \`Approved-Hash\`) to confirm the spec is neither unapproved nor stale/modified since approval.
-2. **Enforce Constitution**: Read \`.specify/constitution.md\` to strictly honor the project's tech stack, strict typing (no \`any\` or blind casts), and error handling standards.
-3. **Incremental, Type-Safe Implementation**:
-   - Write modular, single-responsibility files inside \`src/\` conforming strictly to the spec's Domain Models and Interface Contracts.
-   - Handle every documented Edge Case explicitly (never leave empty \`catch {}\` blocks or silent failures).
-4. **Automated Test Verification**:
-   - Write unit/integration tests verifying the happy path and every negative/edge case defined in the spec.
-   - Run the test suite and ensure all tests pass with zero warnings.
+2. **Enforce Constitution & Contracts**: Read \`.specify/constitution.md\` to strictly honor tech stack, strict typing (no \`any\` or blind casts), and error handling standards.
+3. **Mandatory TDD Red-Green-Refactor Loop**:
+   - **Step 3.1: Red Phase (Test First)**:
+     * Author automated unit/integration tests directly mapping each Acceptance Criterion (\`AC-1\`..\`AC-N\`) and edge case before touching \`src/\`.
+     * Execute test runner and confirm tests fail as expected (\`Red\`) due to missing implementation.
+   - **Step 3.2: Green Phase (Minimal Implementation)**:
+     * Write clean, type-safe implementation code inside \`src/\` conforming strictly to the spec's Domain Models and Interface Contracts.
+     * Run tests and confirm all pass with zero warnings (\`Green\`).
+   - **Step 3.3: Refactor Phase (Hardening)**:
+     * Clean up code, remove duplication, and handle documented Edge Cases explicitly (never leave empty \`catch {}\` blocks or unhandled promises).
+4. **Bounded Self-Healing**:
+   - If tests or linters fail during development, read the full error stack trace to diagnose the root cause.
+   - Auto-repair the implementation (maximum 3 iterations).
+   - If still failing after 3 attempts, halt immediately and present the diagnostic failure log to the user.
 5. **Handover to Verifier & Status Board**: Invoke \`sdd-verifier\` to audit the implementation against all Acceptance Criteria before claiming task completion, and include the updated **Spec Status Board** in your chat report (via MCP \`nexus://board\`, CLI \`nexus-kit board\`, or Markdown fallback table from \`.specify/tasks/\`).
 `,
 
@@ -169,20 +185,26 @@ Trigger this skill immediately after \`sdd-coder\` finishes implementing code, b
 ## Hard Guardrails
 - **ZERO TRUST AUDIT**: Never assume an implementation works or matches the spec by memory. Read the actual source files and observe live command outputs.
 - **NO PARTIAL PASSES**: All Acceptance Criteria (\`AC-1\`..\`AC-N\`) and all tests must pass without skipped assertions. Never mark \`Status: Completed\` if any AC remains unchecked (\`- [ ]\`).
+- **ANTI-FAKE TEST GATE**: Never accept tests with empty bodies, trivial assertions (e.g. \`expect(true).toBe(true)\`), commented-out checks, or over-mocking that circumvents real logic execution.
+- **SCOPE INTEGRITY GATE**: Fail the verification if unstaged/staged git changes include files outside the spec's \`Target Path\` or unauthorized dependencies in \`package.json\`.
 
 ## Workflow
 1. **Extract Spec Contract & Integrity**:
    - Read the target specification document in \`.specify/tasks/\`.
    - Verify \`Approved-Hash\` integrity has not drifted unexpectedly during implementation.
-   - Extract all Acceptance Criteria (\`AC-1\`, \`AC-2\`...), \`In-Scope\` bounds, \`Out-of-Scope\` prohibitions, and \`Edge Cases\`.
-2. **Build Traceability Matrix**:
+   - Extract all Acceptance Criteria (\`AC-1\`, \`AC-2\`...), \`In-Scope\` bounds, \`Out-of-Scope\` prohibitions, Non-Functional Requirements (NFRs), and \`Edge Cases\`.
+2. **Git Diff Scope & Dependency Leak Check**:
+   - Run \`git status --porcelain\` and \`git diff --name-only\` to verify all changed files are strictly within \`Target Path\` and \`In-Scope\`.
+   - Inspect package manifests (e.g. \`package.json\`) to confirm zero unauthorized dependencies were added.
+3. **Anti-Fake Test & Quality Audit**:
+   - Inspect all written test files.
+   - Verify each Acceptance Criterion has non-trivial, affirmative and negative assertions (no empty tests or bypassed checks).
+4. **Build Traceability Matrix**:
    - Inspect files in \`src/\` and map every Acceptance Criterion to the exact file path and line range implementing it.
-   - Verify no \`Out-of-Scope\` code or unauthorized dependencies were introduced.
-3. **Constitution Compliance Check**:
-   - Audit code against \`.specify/constitution.md\`: verify explicit types (no \`any\`), structured validation (no loose string parsing), and proper error handling.
-4. **Run Automated Gates**:
+   - Verify code against \`.specify/constitution.md\`: explicit types (no \`any\`), structured validation, and robust error handling.
+5. **Run Automated Gates**:
    - Execute project tests, type checks, linters, and \`npx create-nexus-kit --doctor\` directly in the terminal and observe full outputs.
-5. **Finalize, Emit Verification Report & Status Board**:
+6. **Finalize, Emit Verification Report & Status Board**:
    - Render a Traceability & Compliance table marking each AC as \`[PASSED]\` or \`[FAILED]\` with observed evidence.
    - Only if all checks pass: mark ACs as \`- [x]\` and update \`Status\` to \`Completed\`. Otherwise block completion and hand specific remediation items back to \`sdd-coder\`.
    - Always conclude your response by displaying the live **Spec Status Board** in chat: prefer MCP resource \`nexus://board\`, otherwise run \`nexus-kit board\` / \`npx create-nexus-kit board\`, or if offline/sandboxed render a Markdown table (\`ID | Ver | Status | Integrity | Criteria | Progress | Title\`) directly from \`.specify/tasks/\`.

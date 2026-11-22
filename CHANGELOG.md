@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.0] - 2026-11-22
+
+### Added
+- **Agentic Skills Evolution (`SPEC-013` - Phase 1)**:
+  - **`sdd-planner`**:
+    - **Socratic Clarifying Probing**: Prompts AI to ask concise questions offering concrete architectural options (`[Option A: ...]`, `[Option B: ...]`, `[Option C: ...]`) when requests lack technical details.
+    - **Pre-flight Codebase Inspection**: Inspects existing domain models and utilities before drafting specs to prevent duplicate code and maximize reuse.
+  - **`spec-template.md`**:
+    - **Non-Functional Requirements (NFRs)**: Standardized section `2.3 Non-Functional Requirements (NFRs)` covering Performance Budgets, Security & Privacy (OWASP compliance), and Backward Compatibility / Migrations.
+  - **`sdd-coder`**:
+    - **Mandatory TDD Red-Green-Refactor Loop**: Enforces writing automated tests mapping `AC-1`..`AC-N` first (`Red`), implementing minimal code in `src/` to satisfy tests (`Green`), and refactoring for strict types and clean architecture.
+    - **Bounded Self-Healing Policy**: Authorizes up to 3 automated remediation cycles based on stack traces; strictly prohibits lowering the quality bar (no test deletion, no trivial mocks, no empty assertions).
+  - **`sdd-verifier`**:
+    - **Anti-Fake Test Gate**: Audits test code to reject trivial assertions (e.g. `expect(true).toBe(true)`), empty tests, or excessive mocking that bypasses unit logic.
+    - **Git Diff Scope & Dependency Leak Gate**: Verifies that modified files strictly match `Target Path` and audits manifests for unauthorized dependencies.
+  - **Scaffolding & Ecosystem Parity**:
+    - Synchronized all rules across `.agents/skills/`, `.specify/templates/`, `create-nexus-kit/lib/templates.js`, `create-nexus-kit/install.sh`, and `dist/agensi/nexus-kit/SKILL.md`.
+    - Added dedicated automated test suite `create-nexus-kit/tests/skills.test.js` bringing test suite to **56 passing tests across 12 suites**.
+
+---
+
 ## [2.2.0] - 2026-11-18
 
 ### Added

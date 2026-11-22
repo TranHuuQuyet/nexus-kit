@@ -44,6 +44,11 @@ export interface EntityModel {
 - **Output / Return Type:**
 - **Failure Responses:**
 
+### 2.3 Non-Functional Requirements (NFRs)
+- **Performance Budget:** [e.g. latency < 200ms, bundle size impact < 5KB]
+- **Security & Privacy:** [e.g. input sanitization, zero plain-text secrets, OWASP compliance]
+- **Backward Compatibility & Migrations:** [e.g. non-breaking changes, migration steps]
+
 ---
 
 ## 3. Logic Flow & State Transitions
