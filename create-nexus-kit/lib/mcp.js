@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { execSync } from 'node:child_process';
 import {
   VERSION,
   TEMPLATES,
@@ -180,6 +181,28 @@ export const MCP_TOOLS = [
       },
       required: ['id', 'title']
     }
+  },
+  {
+    name: 'nexus_audit_compliance',
+    description: 'Run comprehensive compliance audit on an approved spec against current git workspace, validating cryptographic hash integrity, git diff scope leaks, anti-fake test heuristics, and triggering MCP sampling for adversarial semantic review when supported.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        specPath: {
+          type: 'string',
+          description: 'Relative or absolute path to the target specification markdown file (e.g. .specify/tasks/013-agentic-skills-evolution-spec.md).'
+        },
+        targetDir: {
+          type: 'string',
+          description: 'Target project root directory (defaults to current working directory).'
+        },
+        enableSampling: {
+          type: 'boolean',
+          description: 'Whether to request MCP sampling from the host AI (default: true).'
+        }
+      },
+      required: ['specPath']
+    }
   }
 ];
 
@@ -249,7 +272,7 @@ export const MCP_PROMPTS = [
 /**
  * Handles MCP tool calls.
  */
-export function handleToolCall(name, args = {}, context = {}) {
+export async function handleToolCall(name, args = {}, context = {}) {
   const targetDir = args.targetDir ? path.resolve(args.targetDir) : context.targetDir || process.cwd();
 
   switch (name) {
@@ -391,6 +414,172 @@ export function handleToolCall(name, args = {}, context = {}) {
       }
     }
 
+    case 'nexus_audit_compliance': {
+      if (!args.specPath) {
+        return {
+          content: [{ type: 'text', text: '[FAIL] "specPath" argument is required.' }],
+          isError: true
+        };
+      }
+
+      const fullPath = path.isAbsolute(args.specPath) ? args.specPath : path.resolve(targetDir, args.specPath);
+      if (!fs.existsSync(fullPath)) {
+        return {
+          content: [{ type: 'text', text: `[FAIL] Specification file not found: ${args.specPath}` }],
+          isError: true
+        };
+      }
+
+      const rawContent = fs.readFileSync(fullPath, 'utf8');
+      const meta = parseSpecMetadata(rawContent);
+      const liveHash = computeSpecHash(rawContent);
+      const approvedHash = meta['Approved-Hash'] || 'Pending';
+      const specStatus = meta.Status || 'Draft';
+      const isHashValid = approvedHash !== 'Pending' && approvedHash.toLowerCase() === liveHash.toLowerCase();
+
+      // Extract spec ID from filename or title
+      const baseName = path.basename(fullPath);
+      const idMatch = baseName.match(/^(\d{3})/);
+      const specId = idMatch ? idMatch[1] : 'unknown';
+
+      // Target paths from metadata
+      const targetPathRaw = meta['Target Path'] || meta['Target-Path'] || 'src/';
+      const targetPaths = targetPathRaw
+        .split(',')
+        .map((p) => p.trim().replace(/[`']/g, ''))
+        .filter(Boolean);
+
+      // Scope check via git status
+      const leaksDetected = [];
+      const changedFiles = [];
+      try {
+        const gitStatus = execSync('git status --porcelain', { cwd: targetDir, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+        const lines = gitStatus.split('\n').filter(Boolean);
+        for (const line of lines) {
+          const filePath = line.substring(3).trim();
+          changedFiles.push(filePath);
+          const isAllowed = targetPaths.some((tp) => filePath.startsWith(tp)) ||
+                            filePath.startsWith('.specify/') ||
+                            filePath.startsWith('tests/') ||
+                            filePath.startsWith('test/') ||
+                            filePath === 'package.json';
+          if (!isAllowed) {
+            leaksDetected.push(filePath);
+          }
+        }
+      } catch {
+        // Non-git directory or git command unavailable
+      }
+
+      // Anti-fake test heuristic scan
+      const testFilesFound = [];
+      const emptyTestsDetected = [];
+      const trivialAssertionsDetected = [];
+
+      const scanDir = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git') {
+              scanDir(full);
+            } else if (entry.isFile() && (entry.name.endsWith('.test.js') || entry.name.endsWith('.spec.js') || entry.name.endsWith('.test.ts'))) {
+              testFilesFound.push(path.relative(targetDir, full));
+              const fileContent = fs.readFileSync(full, 'utf8');
+              if (/\b(?:test|it)\s*\([^,]+,\s*(?:async\s*)?\(\s*\)\s*=>\s*\{\s*\}\s*\)/.test(fileContent)) {
+                emptyTestsDetected.push(path.relative(targetDir, full));
+              }
+              if (/expect\s*\(\s*true\s*\)\s*\.to(?:Be|Equal)\s*\(\s*true\s*\)|assert\s*\.\s*(?:ok|equal)\s*\(\s*true\s*,\s*true\s*\)/.test(fileContent)) {
+                trivialAssertionsDetected.push(path.relative(targetDir, full));
+              }
+            }
+          }
+        } catch {
+          // Directory unreadable
+        }
+      };
+
+      scanDir(path.join(targetDir, 'tests'));
+      scanDir(path.join(targetDir, 'test'));
+
+      // Sampling audit
+      let samplingAudit = {
+        performed: false,
+        reason: 'Client does not support sampling'
+      };
+
+      const clientSupportsSampling = Boolean(context.clientCapabilities?.sampling);
+      const shouldSample = clientSupportsSampling && args.enableSampling !== false && typeof context.dispatchClientRequest === 'function';
+
+      if (shouldSample) {
+        try {
+          const sampleRes = await context.dispatchClientRequest('sampling/createMessage', {
+            messages: [
+              {
+                role: 'user',
+                content: {
+                  type: 'text',
+                  text: `Audit compliance for Spec ${specId} (${baseName}). Target paths: ${targetPaths.join(', ')}. Changed files: ${changedFiles.join(', ')}. Return VERDICT: APPROVE or REJECT with concise rationale.`
+                }
+              }
+            ],
+            maxTokens: 500,
+            systemPrompt: 'You are an adversarial AI auditor verifying that code strictly implements the approved specification without scope creep.'
+          }, 20000);
+
+          const sampledText = sampleRes?.content?.text || (Array.isArray(sampleRes?.content) ? sampleRes.content[0]?.text : null) || 'Sampling completed';
+          const verdict = /REJECT/i.test(sampledText) ? 'REJECT' : 'APPROVE';
+          samplingAudit = {
+            performed: true,
+            verdict,
+            feedback: sampledText
+          };
+        } catch (sampleErr) {
+          samplingAudit = {
+            performed: false,
+            reason: sampleErr.message || 'Sampling request failed'
+          };
+        }
+      }
+
+      const isScopeValid = leaksDetected.length === 0;
+      const isTestValid = emptyTestsDetected.length === 0 && trivialAssertionsDetected.length === 0;
+      let overallStatus = 'PASSED';
+      if (!isHashValid || !isScopeValid || !isTestValid || (samplingAudit.performed && samplingAudit.verdict === 'REJECT')) {
+        overallStatus = 'FAILED';
+      }
+
+      const result = {
+        specId,
+        specPath: args.specPath,
+        overallStatus,
+        integrity: {
+          status: specStatus,
+          approvedHash,
+          liveHash,
+          valid: isHashValid
+        },
+        scope: {
+          targetPaths,
+          changedFiles,
+          leaksDetected,
+          valid: isScopeValid
+        },
+        testQuality: {
+          testFilesFound,
+          emptyTestsDetected,
+          trivialAssertionsDetected,
+          valid: isTestValid
+        },
+        samplingAudit
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
+      };
+    }
+
     case 'nexus_approve_spec': {
       return {
         content: [{
@@ -528,7 +717,35 @@ export function createMcpServer(options = {}) {
   const stdin = options.stdin || process.stdin;
   const stdout = options.stdout || process.stdout;
   const targetDir = options.targetDir ? path.resolve(options.targetDir) : process.cwd();
-  const context = { targetDir };
+  const context = { targetDir, clientCapabilities: {} };
+  const pendingRequests = new Map();
+  let nextRequestId = 1000;
+
+  function dispatchClientRequest(method, params, timeoutMs = 20000) {
+    return new Promise((resolve, reject) => {
+      const reqId = nextRequestId++;
+      const timer = setTimeout(() => {
+        pendingRequests.delete(reqId);
+        reject(new Error(`Client request timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      pendingRequests.set(reqId, {
+        resolve: (val) => {
+          clearTimeout(timer);
+          resolve(val);
+        },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+
+      const payload = JSON.stringify({ jsonrpc: '2.0', id: reqId, method, params });
+      stdout.write(payload + '\n');
+    });
+  }
+
+  context.dispatchClientRequest = dispatchClientRequest;
 
   const rl = readline.createInterface({
     input: stdin,
@@ -547,7 +764,7 @@ export function createMcpServer(options = {}) {
     stdout.write(payload + '\n');
   };
 
-  rl.on('line', (line) => {
+  rl.on('line', async (line) => {
     const trimmed = line.trim();
     if (!trimmed) return;
 
@@ -564,6 +781,18 @@ export function createMcpServer(options = {}) {
       return;
     }
 
+    // Intercept client responses to server-initiated requests
+    if (req.id !== undefined && pendingRequests.has(req.id)) {
+      const handler = pendingRequests.get(req.id);
+      pendingRequests.delete(req.id);
+      if (req.error) {
+        handler.reject(new Error(req.error.message || 'Client request rejected'));
+      } else {
+        handler.resolve(req.result);
+      }
+      return;
+    }
+
     // Handle notifications (no id)
     if (req.id === undefined) {
       // Notifications require no response (e.g. notifications/initialized)
@@ -575,6 +804,7 @@ export function createMcpServer(options = {}) {
     try {
       switch (method) {
         case 'initialize': {
+          context.clientCapabilities = params.capabilities || {};
           sendResponse(id, {
             protocolVersion: MCP_PROTOCOL_VERSION,
             serverInfo: {
@@ -605,8 +835,12 @@ export function createMcpServer(options = {}) {
             sendError(id, -32602, 'Invalid params: Missing "name" parameter for tools/call');
             break;
           }
-          const result = handleToolCall(params.name, params.arguments || {}, context);
-          sendResponse(id, result);
+          try {
+            const result = await handleToolCall(params.name, params.arguments || {}, context);
+            sendResponse(id, result);
+          } catch (toolErr) {
+            sendError(id, -32603, toolErr.message);
+          }
           break;
         }
 
@@ -660,6 +894,8 @@ export function createMcpServer(options = {}) {
 
   return {
     rl,
+    context,
+    dispatchClientRequest,
     close: () => rl.close()
   };
 }

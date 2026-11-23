@@ -33,3 +33,7 @@ Trigger this skill immediately after `sdd-coder` finishes implementing code, bef
    - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
    - Only if all checks pass: mark ACs as `- [x]` and update `Status` to `Completed`. Otherwise block completion and hand specific remediation items back to `sdd-coder`.
    - Always conclude your response by displaying the live **Spec Status Board** in chat: prefer MCP resource `nexus://board`, otherwise run `nexus-kit board` / `npx create-nexus-kit board`, or if offline/sandboxed render a Markdown table (`ID | Ver | Status | Integrity | Criteria | Progress | Title`) directly from `.specify/tasks/`.
+
+## Agent Handoff Protocol
+- **Remediation Handoff**: If any Acceptance Criteria or tests fail during verification, reject completion and immediately hand off a structured remediation checklist back to `sdd-coder` (e.g. `/sdd-coder`).
+- **Completion Handoff**: When 100% of Acceptance Criteria pass, mark `Status: Completed`, render the final Spec Status Board, and signal task closure to the user and team.

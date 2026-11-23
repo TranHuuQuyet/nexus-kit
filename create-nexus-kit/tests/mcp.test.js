@@ -117,7 +117,7 @@ describe('Model Context Protocol (MCP) Server', () => {
     const res = await client.call('tools/list', {}, 10);
     assert.equal(res.id, 10);
     assert.ok(Array.isArray(res.result.tools));
-    assert.equal(res.result.tools.length, 5);
+    assert.equal(res.result.tools.length, 6);
 
     const toolNames = res.result.tools.map((t) => t.name);
     assert.ok(toolNames.includes('nexus_check_constitution'));
@@ -125,6 +125,7 @@ describe('Model Context Protocol (MCP) Server', () => {
     assert.ok(toolNames.includes('nexus_verify_spec'));
     assert.ok(toolNames.includes('nexus_doctor'));
     assert.ok(toolNames.includes('nexus_create_spec'));
+    assert.ok(toolNames.includes('nexus_audit_compliance'));
     assert.equal(toolNames.includes('nexus_approve_spec'), false);
   });
 

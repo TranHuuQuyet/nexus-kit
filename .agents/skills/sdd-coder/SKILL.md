@@ -34,3 +34,7 @@ Trigger this skill when the user asks to implement code or complete a task that 
    - Auto-repair the implementation (maximum 3 iterations).
    - If still failing after 3 attempts, halt immediately and present the diagnostic failure log to the user.
 5. **Handover to Verifier & Status Board**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion, and include the updated **Spec Status Board** in your chat report (via MCP `nexus://board`, CLI `nexus-kit board`, or Markdown fallback table from `.specify/tasks/`).
+
+## Agent Handoff Protocol
+- **Subagent Delegation (Isolated TDD)**: When executing extensive test suites or refactoring, delegate test execution to an isolated subagent or background task runner.
+- **Handoff to Verifier**: Once the TDD Red-Green loop passes with zero warnings, conclude your turn by directly prompting invocation of `sdd-verifier` (e.g. `/sdd-verifier`) along with the live Spec Status Board.

@@ -10,3 +10,4 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
   - For implementation: follow `.agents/skills/sdd-coder/SKILL.md` and stay strictly within `In-Scope` bounds.
   - For verification: follow `.agents/skills/sdd-verifier/SKILL.md` to audit against Acceptance Criteria.
 - **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+- **Agent Handoff Protocol**: Fluid transitions between roles: Planner hands off to Coder upon approval (`/sdd-coder`), Coder hands off to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.

@@ -266,6 +266,10 @@ Trigger this skill when the user asks to plan a feature, design architecture, mo
    - Save into `.specify/tasks/` with an incrementing numeric prefix and descriptive kebab-case name (e.g., `002-feature-name-spec.md`).
 7. **Human Approval Gate & Status Board**:
    - Present a summary of the spec, instruct the user to approve it (e.g., by running `npx create-nexus-kit --approve .specify/tasks/<file>.md`) before `sdd-coder` is permitted to execute, and display the current **Spec Status Board** in your response (read MCP `nexus://board`, or run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table `ID | Ver | Status | Integrity | Criteria | Progress | Title` directly from `.specify/tasks/` if offline).
+
+## Agent Handoff Protocol
+- **Subagent Delegation (Exploration)**: When researching existing architecture or external docs, spawn or delegate to an exploration subagent (e.g. `researcher`) to explore the codebase without cluttering planning context.
+- **Handoff to Coder**: Upon receiving human approval (`Status: Approved`), automatically provide the explicit command to invoke `sdd-coder` (e.g. `/sdd-coder`) to seamlessly advance to the implementation phase.
 EOF
 
 safe_write ".agents/skills/sdd-coder/SKILL.md" << 'EOF'
@@ -305,6 +309,10 @@ Trigger this skill when the user asks to implement code or complete a task that 
    - Auto-repair the implementation (maximum 3 iterations).
    - If still failing after 3 attempts, halt immediately and present the diagnostic failure log to the user.
 5. **Handover to Verifier & Status Board**: Invoke `sdd-verifier` to audit the implementation against all Acceptance Criteria before claiming task completion, and include the updated **Spec Status Board** in your chat report (via MCP `nexus://board`, CLI `nexus-kit board`, or Markdown fallback table from `.specify/tasks/`).
+
+## Agent Handoff Protocol
+- **Subagent Delegation (Isolated TDD)**: When executing extensive test suites or refactoring, delegate test execution to an isolated subagent or background task runner.
+- **Handoff to Verifier**: Once the TDD Red-Green loop passes with zero warnings, conclude your turn by directly prompting invocation of `sdd-verifier` (e.g. `/sdd-verifier`) along with the live Spec Status Board.
 EOF
 
 safe_write ".agents/skills/sdd-verifier/SKILL.md" << 'EOF'
@@ -343,6 +351,10 @@ Trigger this skill immediately after `sdd-coder` finishes implementing code, bef
    - Render a Traceability & Compliance table marking each AC as `[PASSED]` or `[FAILED]` with observed evidence.
    - Only if all checks pass: mark ACs as `- [x]` and update `Status` to `Completed`. Otherwise block completion and hand specific remediation items back to `sdd-coder`.
    - Always conclude your response by displaying the live **Spec Status Board** in chat: prefer MCP resource `nexus://board`, otherwise run `nexus-kit board` / `npx create-nexus-kit board`, or if offline/sandboxed render a Markdown table (`ID | Ver | Status | Integrity | Criteria | Progress | Title`) directly from `.specify/tasks/`.
+
+## Agent Handoff Protocol
+- **Remediation Handoff**: If any Acceptance Criteria or tests fail during verification, reject completion and immediately hand off a structured remediation checklist back to `sdd-coder` (e.g. `/sdd-coder`).
+- **Completion Handoff**: When 100% of Acceptance Criteria pass, mark `Status: Completed`, render the final Spec Status Board, and signal task closure to the user and team.
 EOF
 
 safe_write "AGENTS.md" << 'EOF'
@@ -358,6 +370,7 @@ This workspace operates under **Nexus Kit** (Spec-Driven Development).
    - **Coding**: Use `.agents/skills/sdd-coder/SKILL.md` to implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Use `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
 4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+5. **Agent Handoff Protocol**: Fluid transitions between roles: Planner hands off to Coder upon approval (`/sdd-coder`), Coder hands off to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.
 EOF
 
 safe_write "CLAUDE.md" << 'EOF'
@@ -373,6 +386,7 @@ This project is governed by **Nexus Kit** (Spec-Driven Development).
    - Implementing a spec -> Follow `.agents/skills/sdd-coder/SKILL.md`.
    - Auditing implementation -> Follow `.agents/skills/sdd-verifier/SKILL.md`.
 4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+5. **Agent Handoff Protocol**: Fluid transitions between roles: Planner hands off to Coder upon approval (`/sdd-coder`), Coder hands off to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.
 EOF
 
 safe_write ".cursor/rules/nexus-kit.mdc" << 'EOF'
@@ -393,6 +407,7 @@ This repository uses **Nexus Kit**. You must enforce these rules on every intera
    - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within the `In-Scope` bounds of the approved spec.
    - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit the implementation against all Acceptance Criteria.
 4. **SHOW SPEC STATUS BOARD**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+5. **AGENT HANDOFF PROTOCOL**: Support fluid handoffs: Planner transitions to Coder upon approval (`/sdd-coder`), Coder transitions to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.
 EOF
 
 safe_write ".github/copilot-instructions.md" << 'EOF'
@@ -408,6 +423,7 @@ This repository follows **Spec-Driven Development (SDD)** powered by Nexus Kit.
   - For implementation: follow `.agents/skills/sdd-coder/SKILL.md` and stay strictly within `In-Scope` bounds.
   - For verification: follow `.agents/skills/sdd-verifier/SKILL.md` to audit against Acceptance Criteria.
 - **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+- **Agent Handoff Protocol**: Fluid transitions between roles: Planner hands off to Coder upon approval (`/sdd-coder`), Coder hands off to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.
 EOF
 
 safe_write ".windsurfrules" << 'EOF'
@@ -423,6 +439,7 @@ This project is governed by **Nexus Kit** (Spec-Driven Development).
    - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within `In-Scope` bounds of approved specs.
    - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit implementation against all Acceptance Criteria.
 4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+5. **Agent Handoff Protocol**: Fluid transitions between roles: Planner hands off to Coder upon approval (`/sdd-coder`), Coder hands off to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.
 EOF
 
 safe_write ".clinerules" << 'EOF'
@@ -438,6 +455,7 @@ This repository adheres to **Nexus Kit** (Spec-Driven Development).
    - **sdd-coder**: Follow `.agents/skills/sdd-coder/SKILL.md` only after verifying approval with `nexus-kit --verify-spec <spec-path>`.
    - **sdd-verifier**: Follow `.agents/skills/sdd-verifier/SKILL.md` to audit Acceptance Criteria before completing the task.
 4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
+5. **Agent Handoff Protocol**: Fluid transitions between roles: Planner hands off to Coder upon approval (`/sdd-coder`), Coder hands off to Verifier upon green tests (`/sdd-verifier`), and Verifier hands remediation back to Coder on failure or closes the task on success.
 EOF
 
 if [ "$WITH_HOOKS" = "true" ]; then

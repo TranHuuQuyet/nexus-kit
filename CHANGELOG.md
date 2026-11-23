@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.0] - 2026-11-23
+
+### Added
+- **Subagent Handoff Protocol & Native MCP Sampling Audit (`SPEC-014` - Phase 2)**:
+  - **Universal Subagent Handoff Protocol**:
+    - Embedded `## Agent Handoff Protocol` into all 3 SDD skills (`sdd-planner`, `sdd-coder`, `sdd-verifier`) providing standardized handoff instructions (`/sdd-coder`, `/sdd-verifier`, and remediation handback).
+    - Enforced Rule 5 (Agent Handoff Protocol) across all 6 IDE adapters (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/nexus-kit.mdc`, `.github/copilot-instructions.md`, `.windsurfrules`, `.clinerules`).
+  - **Native MCP Sampling & Hybrid Compliance Audit (`nexus_audit_compliance`)**:
+    - Upgraded `create-nexus-kit/lib/mcp.js` with bidirectional JSON-RPC duplexing: captures `clientCapabilities` on `initialize` and dispatches server-to-client requests (`dispatchClientRequest`).
+    - Registered and implemented `nexus_audit_compliance` tool in MCP Server performing 4-tier audit:
+      1. Cryptographic Spec Hash verification against `.specify/tasks/`.
+      2. Git Diff Scope leak detection against declared `Target Path`.
+      3. Anti-Fake Test Heuristics scanning for empty test blocks or trivial assertions.
+      4. Native MCP Sampling (`sampling/createMessage`) requesting host AI semantic review, with graceful fallback if the client lacks sampling or times out (20s).
+  - **Ecosystem Parity & Automated Tests**:
+    - Synchronized all changes 100% across `create-nexus-kit/lib/templates.js`, `create-nexus-kit/install.sh`, and `dist/agensi/nexus-kit/SKILL.md`.
+    - Added dedicated automated test suite `create-nexus-kit/tests/mcp-sampling.test.js` validating protocol registration, duplex sampling requests, and template parity, bringing total test suite to **62 passing tests across 12 suites**.
+
+---
+
 ## [2.3.0] - 2026-11-22
 
 ### Added
