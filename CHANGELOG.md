@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.0] - 2026-11-24
+
+### Added
+- **Enterprise CI/CD Spec Enforcement Gate (`SPEC-015` - Phase 3)**:
+  - **Core Guard Engine (`create-nexus-kit/lib/guard.js`)**:
+    - Centralized git diff audit (`runGuardAudit`) comparing PR head branch against base branch (`origin/main`, `GITHUB_BASE_REF`).
+    - Enforces NO VIBE CODING on Remote/PRs by detecting un-specced changes in `src/`, spec hash drift, and scope leaks.
+    - Supports safe bypass mechanism via `[skip-spec]` directive in commit logs or PR titles, plus advisory `--warn-only` mode.
+    - Renders visual Spec Status & Compliance markdown report compatible with GitHub Actions Step Summary (`$GITHUB_STEP_SUMMARY`).
+    - Provides automatic sticky PR commenting via native GitHub REST API (`fetch`) without external dependencies.
+  - **CLI Command `nexus-kit guard`**:
+    - Added `guard` subcommand (aliases: `ci`, `check-pr`) to `create-nexus-kit` CLI supporting `--base`, `--head`, `--strict`, `--warn-only`, `--json`, `--summary`, `--comment-pr`, and `--token`.
+  - **Reusable GitHub Action & Workflow**:
+    - Created root composite GitHub Action (`action.yml`) allowing external repositories to adopt Spec Guard (`uses: TranHuuQuyet/nexus-kit@v2.5.0`).
+    - Configured CI workflow `.github/workflows/nexus-guard.yml` automatically guarding pull requests into `main`.
+  - **Automated Regression Tests**:
+    - Added dedicated test suite `create-nexus-kit/tests/guard.test.js` validating detection rules, branch diffing, bypass directives, and CLI flags, bringing test suite to **69 passing tests across 12 suites**.
+
+---
+
 ## [2.4.0] - 2026-11-23
 
 ### Added

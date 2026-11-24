@@ -12,7 +12,8 @@ import {
   validateProject,
   installGitPreCommitHook,
   renderTasksBoard,
-  runMcpServer
+  runMcpServer,
+  runGuardAudit
 } from '../lib/nexus.js';
 
 const c = {
@@ -41,6 +42,7 @@ function printHelp() {
 ${c.bold}Usage:${c.reset}
   npx create-nexus-kit@latest [project-name] [options]
   npx create-nexus-kit@latest board [target-dir] [--json]
+  npx create-nexus-kit@latest guard [target-dir] [options]
   npx create-nexus-kit@latest mcp [target-dir]
   npx create-nexus-kit@latest init-hooks [target-dir]
   npx create-nexus-kit@latest --doctor [target-dir]
@@ -57,8 +59,13 @@ ${c.bold}Options:${c.reset}
   --with-hooks            Initialize Git and install pre-commit hard gate during scaffolding
   init-hooks, --init-hooks Install Git pre-commit hard gate into target directory
   board, status           Render visual Terminal Status Board of task specifications
+  guard, ci, check-pr     Enforce SDD Spec Guard on git diff / Pull Requests
+  --base <ref>            Base branch/commit to diff against (default: origin/main)
+  --warn-only             Run spec guard in advisory mode without exiting 1 on violations
+  --summary               Output spec guard Markdown to GITHUB_STEP_SUMMARY
+  --comment-pr            Post sticky PR comment via GitHub API
   mcp, serve-mcp          Run native Model Context Protocol (MCP) server over stdio
-  --json                  Output status board in structured JSON format
+  --json                  Output status board or guard results in structured JSON format
   --doctor, --check       Run full integrity & lifecycle validation on a project
   --approve <spec-file>   Approve a spec and stamp its canonical SHA-256 hash
   --by <name>             Reviewer name when using --approve
@@ -82,6 +89,40 @@ ${c.bold}Examples:${c.reset}
 function runBoard(targetDir, isJson) {
   const output = renderTasksBoard(targetDir, { json: isJson });
   console.log(output);
+}
+
+async function runGuard(options) {
+  const result = await runGuardAudit(options);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.passed ? 0 : 1);
+  }
+
+  console.log(BANNER);
+  if (result.bypassed) {
+    console.log(`  ${c.yellow}[BYPASSED]${c.reset} ${result.bypassReason}\n`);
+  } else if (result.passed) {
+    console.log(`  ${c.green}[PASS]${c.reset} Spec Enforcement Guard passed: 100% SDD Compliant!\n`);
+  } else {
+    console.log(`  ${c.red}[FAIL]${c.reset} Spec Enforcement Guard failed: ${result.violations.length} violation(s) detected.\n`);
+  }
+
+  console.log(`  ${c.dim}Base:${c.reset}              ${result.baseRef || 'N/A'}`);
+  console.log(`  ${c.dim}Head:${c.reset}              ${result.headRef}`);
+  console.log(`  ${c.dim}Total Changed:${c.reset}     ${result.totalChangedFiles}`);
+  console.log(`  ${c.dim}Specced Files:${c.reset}     ${c.green}${result.speccedFiles.length}${c.reset}`);
+  console.log(`  ${c.dim}Unspecced Files:${c.reset}   ${result.unspeccedFiles.length > 0 ? c.red : c.green}${result.unspeccedFiles.length}${c.reset}`);
+
+  if (result.violations.length > 0) {
+    console.log(`\n${c.bold}Violations:${c.reset}`);
+    for (const v of result.violations) {
+      console.log(`  ${c.red}✖ [${v.type}]${c.reset} ${v.file}: ${v.message}`);
+    }
+  }
+
+  console.log('');
+  process.exit(result.passed ? 0 : 1);
 }
 
 function runInitHooks(targetDir, force) {
@@ -167,7 +208,7 @@ function runVerifySpec(specFileArg) {
   }
 }
 
-function run() {
+async function run() {
   const args = process.argv.slice(2);
 
   if (args.includes('-h') || args.includes('--help')) {
@@ -211,6 +252,39 @@ function run() {
     return;
   }
 
+  const guardIndex = args.findIndex((a) => a === 'guard' || a === 'ci' || a === 'check-pr');
+  if (guardIndex !== -1) {
+    const nextArg = args[guardIndex + 1];
+    const target = nextArg && !nextArg.startsWith('-') ? path.resolve(process.cwd(), nextArg) : process.cwd();
+    const isJson = args.includes('--json');
+    const warnOnly = args.includes('--warn-only');
+    const strict = !warnOnly && !args.includes('--no-strict');
+    const summary = args.includes('--summary');
+    const commentPr = args.includes('--comment-pr');
+
+    const baseIdx = args.indexOf('--base');
+    const baseRef = baseIdx !== -1 ? args[baseIdx + 1] : undefined;
+
+    const headIdx = args.indexOf('--head');
+    const headRef = headIdx !== -1 ? args[headIdx + 1] : undefined;
+
+    const tokenIdx = args.indexOf('--token');
+    const token = tokenIdx !== -1 ? args[tokenIdx + 1] : undefined;
+
+    await runGuard({
+      targetDir: target,
+      baseRef,
+      headRef,
+      strict,
+      warnOnly,
+      json: isJson,
+      summary,
+      commentPr,
+      githubToken: token
+    });
+    return;
+  }
+
   const hookIndex = args.findIndex((a) => a === 'init-hooks' || a === '--init-hooks');
   if (hookIndex !== -1) {
     const nextArg = args[hookIndex + 1];
@@ -239,7 +313,17 @@ function run() {
     process.exit(1);
   }
 
-  const positionalArgs = args.filter((a) => !a.startsWith('-') && a !== 'init-hooks' && a !== 'board' && a !== 'status' && a !== 'mcp' && a !== 'serve-mcp' && (presetIdx === -1 || a !== presetName));
+  const flagWithArg = ['--preset', '--base', '--head', '--token', '--by', '--approve', '--verify-spec'];
+  const skipValues = new Set();
+  for (const flag of flagWithArg) {
+    const idx = args.indexOf(flag);
+    if (idx !== -1 && args[idx + 1]) {
+      skipValues.add(args[idx + 1]);
+    }
+  }
+
+  const reservedCommands = new Set(['init-hooks', 'board', 'status', 'mcp', 'serve-mcp', 'guard', 'ci', 'check-pr']);
+  const positionalArgs = args.filter((a) => !a.startsWith('-') && !reservedCommands.has(a) && !skipValues.has(a));
   const rawName = positionalArgs[0] || 'nexus-kit-app';
   const isCurrentDir = rawName === '.';
   const projectDir = isCurrentDir ? process.cwd() : path.resolve(process.cwd(), rawName);

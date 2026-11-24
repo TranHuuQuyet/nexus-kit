@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const VERSION = '2.4.0';
+export const VERSION = '2.5.0';
 
 export const VALID_SPEC_STATUSES = [
   'Draft',
@@ -916,3 +916,4 @@ export function validateProject(targetDir) {
 }
 
 export { createMcpServer, runMcpServer, createSpecDraft, MCP_TOOLS, MCP_RESOURCES, MCP_PROMPTS } from './mcp.js';
+export { runGuardAudit } from './guard.js';

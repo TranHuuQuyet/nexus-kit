@@ -1,0 +1,49 @@
+name: 'Nexus Kit Guard'
+description: 'Enforce Spec-Driven Development (SDD) gates and prevent Vibe Coding on Pull Requests'
+author: 'Tran Huu Quyet'
+inputs:
+  base:
+    description: 'Base branch or ref to diff against (default: origin/main or github.base_ref)'
+    required: false
+    default: ''
+  strict:
+    description: 'Fail CI if un-specced code, hash drift, or scope leaks are detected'
+    required: false
+    default: 'true'
+  warn-only:
+    description: 'Run in advisory mode without failing CI'
+    required: false
+    default: 'false'
+  comment-pr:
+    description: 'Post sticky Spec Status & Compliance comment on the Pull Request'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token for PR comments'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Nexus Kit Spec Guard
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+      run: |
+        ARGS="guard . --summary"
+        if [ -n "${{ inputs.base }}" ]; then
+          ARGS="$ARGS --base ${{ inputs.base }}"
+        fi
+        if [ "${{ inputs.warn-only }}" = "true" ]; then
+          ARGS="$ARGS --warn-only"
+        elif [ "${{ inputs.strict }}" = "false" ]; then
+          ARGS="$ARGS --warn-only"
+        fi
+        if [ "${{ inputs.comment-pr }}" = "true" ]; then
+          ARGS="$ARGS --comment-pr"
+        fi
+        if [ -f "create-nexus-kit/bin/index.js" ]; then
+          node create-nexus-kit/bin/index.js $ARGS
+        else
+          npx --yes create-nexus-kit@latest $ARGS
+        fi
